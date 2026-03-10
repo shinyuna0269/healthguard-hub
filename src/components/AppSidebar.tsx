@@ -8,13 +8,12 @@ import {
   Settings,
   LogOut,
   Home,
-  Users,
   FileText,
   MessageSquare,
   QrCode,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useRole, type UserRole } from "@/contexts/RoleContext";
+import { useAuth, type UserRole } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -82,7 +81,7 @@ const residentNav: NavItem[] = [
 ];
 
 export function AppSidebar() {
-  const { currentRole } = useRole();
+  const { currentRole, signOut } = useAuth();
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
 
@@ -96,13 +95,13 @@ export function AppSidebar() {
       <SidebarContent>
         {!collapsed && (
           <div className="px-4 py-4">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg health-gradient flex items-center justify-center">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-lg health-gradient flex items-center justify-center shrink-0">
                 <Activity className="h-4 w-4 text-primary-foreground" />
               </div>
-              <div>
-                <p className="text-xs font-bold text-sidebar-foreground">GSMS</p>
-                <p className="text-[10px] text-sidebar-foreground/60">Health & Sanitation</p>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-sidebar-foreground leading-tight">Government Service</p>
+                <p className="text-xs font-semibold text-sidebar-foreground/70 leading-tight">Management</p>
               </div>
             </div>
           </div>
@@ -149,7 +148,10 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 cursor-pointer">
+            <SidebarMenuButton
+              className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 cursor-pointer"
+              onClick={signOut}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               {!collapsed && <span className="text-sm">Logout</span>}
             </SidebarMenuButton>

@@ -1,12 +1,12 @@
-import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
 const ResidentQR = () => {
-  const { currentRole } = useRole();
-  const citizenId = "GSMS-2026-RES-00142";
+  const { user, userName } = useAuth();
+  const citizenId = `GSMS-2026-${user?.id?.slice(0, 8).toUpperCase() || "UNKNOWN"}`;
 
   return (
     <div className="space-y-6">
@@ -19,6 +19,7 @@ const ResidentQR = () => {
         <Card className="glass-card">
           <CardHeader className="text-center">
             <CardTitle className="text-sm font-heading">Digital Citizen ID</CardTitle>
+            {userName && <p className="text-xs text-muted-foreground">{userName}</p>}
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-4">
             <div className="p-4 bg-card rounded-xl border border-border">

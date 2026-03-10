@@ -8,20 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import StatusBadge from "@/components/StatusBadge";
 import StatCard from "@/components/StatCard";
-import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Activity, AlertTriangle, FileText, TrendingUp } from "lucide-react";
+import { toast } from "sonner";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar,
 } from "recharts";
-
-const mockCases = [
-  { id: 1, disease: "Dengue", patient: "Purok 3 Cluster", cases: 5, date: "2026-03-07", status: "active", reporter: "BHW Cruz" },
-  { id: 2, disease: "Tuberculosis", patient: "Individual", cases: 1, date: "2026-03-06", status: "active", reporter: "BHW Lim" },
-  { id: 3, disease: "Influenza", patient: "Purok 1 Cluster", cases: 12, date: "2026-03-04", status: "resolved", reporter: "BHW Santos" },
-  { id: 4, disease: "COVID-19", patient: "Individual", cases: 2, date: "2026-03-02", status: "active", reporter: "BHW Cruz" },
-  { id: 5, disease: "Measles", patient: "Purok 5", cases: 3, date: "2026-02-28", status: "resolved", reporter: "BHW Lim" },
-];
 
 const weeklyTrend = [
   { week: "W1", dengue: 2, flu: 8, tb: 1 },
@@ -31,9 +26,52 @@ const weeklyTrend = [
 ];
 
 const HealthSurveillance = () => {
-  const { currentRole } = useRole();
+  const { currentRole } = useAuth();
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ disease: "", case_count: "", case_date: "", patient_location: "", details: "" });
   const isBHW = currentRole === "BHW_User";
+  const queryClient = useQueryClient();
+
+  const { data: cases = [] } = useQuery({
+    queryKey: ["surveillance_cases"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("surveillance_cases").select("*").order("case_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("surveillance_cases").insert({
+        disease: form.disease,
+        case_count: parseInt(form.case_count) || 1,
+        case_date: form.case_date || new Date().toISOString().split("T")[0],
+        patient_location: form.patient_location,
+        details: form.details,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["surveillance_cases"] });
+      setOpen(false);
+      setForm({ disease: "", case_count: "", case_date: "", patient_location: "", details: "" });
+      toast.success("Case reported");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const activeCases = cases.filter(c => c.status === "active");
+  const resolvedCases = cases.filter(c => c.status === "resolved");
+
+  // Build bar chart data from real cases
+  const diseaseBarData = Object.entries(
+    cases.reduce((acc: Record<string, number>, c) => {
+      acc[c.disease] = (acc[c.disease] || 0) + c.case_count;
+      return acc;
+    }, {})
+  ).map(([disease, cases]) => ({ disease, cases }));
 
   return (
     <div className="space-y-6">
@@ -49,21 +87,23 @@ const HealthSurveillance = () => {
             </Button>
           )}
           {(isBHW || currentRole === "Clerk_User") && (
-            <Dialog>
+            <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Report Case</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle className="font-heading">Report Disease Case</DialogTitle></DialogHeader>
                 <div className="grid gap-3">
-                  <div><Label className="text-xs">Disease</Label><Input placeholder="e.g., Dengue" /></div>
+                  <div><Label className="text-xs">Disease</Label><Input placeholder="e.g., Dengue" value={form.disease} onChange={(e) => setForm({ ...form, disease: e.target.value })} /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div><Label className="text-xs">Number of Cases</Label><Input type="number" /></div>
-                    <div><Label className="text-xs">Date</Label><Input type="date" /></div>
+                    <div><Label className="text-xs">Number of Cases</Label><Input type="number" value={form.case_count} onChange={(e) => setForm({ ...form, case_count: e.target.value })} /></div>
+                    <div><Label className="text-xs">Date</Label><Input type="date" value={form.case_date} onChange={(e) => setForm({ ...form, case_date: e.target.value })} /></div>
                   </div>
-                  <div><Label className="text-xs">Location</Label><Input placeholder="Purok, Barangay" /></div>
-                  <div><Label className="text-xs">Details</Label><Textarea rows={2} /></div>
-                  <Button className="w-full">Submit Report</Button>
+                  <div><Label className="text-xs">Location</Label><Input placeholder="Purok, Barangay" value={form.patient_location} onChange={(e) => setForm({ ...form, patient_location: e.target.value })} /></div>
+                  <div><Label className="text-xs">Details</Label><Textarea rows={2} value={form.details} onChange={(e) => setForm({ ...form, details: e.target.value })} /></div>
+                  <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.disease}>
+                    {addMutation.isPending ? "Submitting..." : "Submit Report"}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -72,9 +112,9 @@ const HealthSurveillance = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Active Cases" value="47" icon={AlertTriangle} trend={{ value: -8, label: "vs last week" }} />
-        <StatCard title="Cases This Month" value="23" icon={Activity} />
-        <StatCard title="Resolved This Month" value="15" icon={TrendingUp} trend={{ value: 12, label: "resolution rate" }} />
+        <StatCard title="Active Cases" value={String(activeCases.reduce((s, c) => s + c.case_count, 0))} icon={AlertTriangle} />
+        <StatCard title="Cases This Month" value={String(cases.length)} icon={Activity} />
+        <StatCard title="Resolved This Month" value={String(resolvedCases.length)} icon={TrendingUp} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -99,13 +139,7 @@ const HealthSurveillance = () => {
           <CardHeader><CardTitle className="text-sm font-heading">Cases by Disease</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={[
-                { disease: "Dengue", cases: 14 },
-                { disease: "TB", cases: 8 },
-                { disease: "Flu", cases: 31 },
-                { disease: "COVID", cases: 5 },
-                { disease: "Measles", cases: 3 },
-              ]}>
+              <BarChart data={diseaseBarData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="disease" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                 <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
@@ -137,12 +171,12 @@ const HealthSurveillance = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockCases.map((c) => (
+              {cases.filter(c => c.disease.toLowerCase().includes(search.toLowerCase())).map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium text-sm">{c.disease}</TableCell>
-                  <TableCell className="text-sm">{c.patient}</TableCell>
-                  <TableCell className="text-sm">{c.cases}</TableCell>
-                  <TableCell className="text-sm hidden md:table-cell">{c.date}</TableCell>
+                  <TableCell className="text-sm">{c.patient_location}</TableCell>
+                  <TableCell className="text-sm">{c.case_count}</TableCell>
+                  <TableCell className="text-sm hidden md:table-cell">{c.case_date}</TableCell>
                   <TableCell className="text-sm hidden md:table-cell">{c.reporter}</TableCell>
                   <TableCell><StatusBadge status={c.status} /></TableCell>
                 </TableRow>

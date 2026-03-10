@@ -3,41 +3,61 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import StatusBadge from "@/components/StatusBadge";
-import { useRole } from "@/contexts/RoleContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Eye } from "lucide-react";
-
-const mockPatients = [
-  { id: 1, name: "Maria Santos", age: 34, address: "Purok 2, Brgy. San Jose", date: "2026-03-08", symptoms: "Fever, Headache", diagnosis: "Dengue Fever", medicine: "Paracetamol", status: "active" },
-  { id: 2, name: "Juan Dela Cruz", age: 55, address: "Purok 5, Brgy. Poblacion", date: "2026-03-07", symptoms: "Cough, Weight loss", diagnosis: "PTB Suspect", medicine: "Referral", status: "pending" },
-  { id: 3, name: "Ana Reyes", age: 8, address: "Purok 1, Brgy. Mabini", date: "2026-03-06", symptoms: "Rashes, Itching", diagnosis: "Skin Allergy", medicine: "Cetirizine", status: "completed" },
-  { id: 4, name: "Pedro Lim", age: 42, address: "Purok 3, Brgy. Rizal", date: "2026-03-05", symptoms: "Hypertension", diagnosis: "HPN Stage 2", medicine: "Amlodipine", status: "active" },
-  { id: 5, name: "Rosa Garcia", age: 28, address: "Purok 4, Brgy. San Jose", date: "2026-03-04", symptoms: "Prenatal Checkup", diagnosis: "Normal Pregnancy", medicine: "Ferrous Sulfate", status: "completed" },
-];
+import { toast } from "sonner";
 
 const HealthCenterServices = () => {
-  const { currentRole } = useRole();
+  const { currentRole } = useAuth();
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ patient_name: "", age: "", address: "", symptoms: "", diagnosis: "", medicine: "", notes: "" });
   const isCaptain = currentRole === "Captain_User";
+  const queryClient = useQueryClient();
 
-  const filtered = mockPatients.filter(
-    (p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.diagnosis.toLowerCase().includes(search.toLowerCase())
+  const { data: consultations = [] } = useQuery({
+    queryKey: ["consultations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("consultations").select("*").order("consultation_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("consultations").insert({
+        patient_name: form.patient_name,
+        age: parseInt(form.age) || null,
+        address: form.address,
+        symptoms: form.symptoms,
+        diagnosis: form.diagnosis,
+        medicine: form.medicine,
+        notes: form.notes,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["consultations"] });
+      setOpen(false);
+      setForm({ patient_name: "", age: "", address: "", symptoms: "", diagnosis: "", medicine: "", notes: "" });
+      toast.success("Consultation saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filtered = consultations.filter(
+    (p) => p.patient_name.toLowerCase().includes(search.toLowerCase()) || (p.diagnosis || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -50,29 +70,27 @@ const HealthCenterServices = () => {
           </p>
         </div>
         {!isCaptain && (
-          <Dialog>
+          <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm" className="gap-1">
-                <Plus className="h-4 w-4" /> Add Consultation
-              </Button>
+              <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Add Consultation</Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="font-heading">New Consultation</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle className="font-heading">New Consultation</DialogTitle></DialogHeader>
               <div className="grid gap-3">
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Patient Name</Label><Input placeholder="Full name" /></div>
-                  <div><Label className="text-xs">Age</Label><Input type="number" placeholder="Age" /></div>
+                  <div><Label className="text-xs">Patient Name</Label><Input placeholder="Full name" value={form.patient_name} onChange={(e) => setForm({ ...form, patient_name: e.target.value })} /></div>
+                  <div><Label className="text-xs">Age</Label><Input type="number" placeholder="Age" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
                 </div>
-                <div><Label className="text-xs">Address</Label><Input placeholder="Address" /></div>
-                <div><Label className="text-xs">Symptoms</Label><Textarea placeholder="Describe symptoms..." rows={2} /></div>
+                <div><Label className="text-xs">Address</Label><Input placeholder="Address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+                <div><Label className="text-xs">Symptoms</Label><Textarea placeholder="Describe symptoms..." rows={2} value={form.symptoms} onChange={(e) => setForm({ ...form, symptoms: e.target.value })} /></div>
                 <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Diagnosis</Label><Input placeholder="Diagnosis" /></div>
-                  <div><Label className="text-xs">Medicine Given</Label><Input placeholder="Medicine" /></div>
+                  <div><Label className="text-xs">Diagnosis</Label><Input placeholder="Diagnosis" value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} /></div>
+                  <div><Label className="text-xs">Medicine Given</Label><Input placeholder="Medicine" value={form.medicine} onChange={(e) => setForm({ ...form, medicine: e.target.value })} /></div>
                 </div>
-                <div><Label className="text-xs">Notes</Label><Textarea placeholder="Additional notes..." rows={2} /></div>
-                <Button className="w-full">Save Consultation</Button>
+                <div><Label className="text-xs">Notes</Label><Textarea placeholder="Additional notes..." rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.patient_name}>
+                  {addMutation.isPending ? "Saving..." : "Save Consultation"}
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -83,12 +101,7 @@ const HealthCenterServices = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search patients or diagnosis..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 max-w-sm"
-            />
+            <Input placeholder="Search patients or diagnosis..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 max-w-sm" />
           </div>
         </CardHeader>
         <CardContent>
@@ -108,18 +121,16 @@ const HealthCenterServices = () => {
             <TableBody>
               {filtered.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium text-sm">{isCaptain ? "****" : p.name}</TableCell>
+                  <TableCell className="font-medium text-sm">{isCaptain ? "****" : p.patient_name}</TableCell>
                   <TableCell className="text-sm">{p.age}</TableCell>
-                  <TableCell className="text-sm hidden md:table-cell">{p.date}</TableCell>
+                  <TableCell className="text-sm hidden md:table-cell">{p.consultation_date}</TableCell>
                   {!isCaptain && <TableCell className="text-sm hidden lg:table-cell">{p.symptoms}</TableCell>}
                   <TableCell className="text-sm">{p.diagnosis}</TableCell>
                   {!isCaptain && <TableCell className="text-sm hidden md:table-cell">{p.medicine}</TableCell>}
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                   <TableCell>
                     {!isCaptain && (
-                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7"><Eye className="h-3.5 w-3.5" /></Button>
                     )}
                   </TableCell>
                 </TableRow>

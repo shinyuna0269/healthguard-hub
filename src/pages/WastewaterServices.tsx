@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,24 +7,50 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import StatusBadge from "@/components/StatusBadge";
-import { useRole } from "@/contexts/RoleContext";
-import { Plus, Search, Droplets } from "lucide-react";
-
-const mockComplaints = [
-  { id: 1, complainant: "Roberto Cruz", type: "Clogged Drainage", location: "Purok 3, Brgy. San Jose", date: "2026-03-07", status: "pending", assigned: "—" },
-  { id: 2, complainant: "Elena Diaz", type: "Septic Overflow", location: "Purok 1, Brgy. Poblacion", date: "2026-03-06", status: "in-progress", assigned: "BSI Ramos" },
-  { id: 3, complainant: "Mario Santos", type: "Illegal Dumping", location: "Purok 5, Brgy. Mabini", date: "2026-03-04", status: "resolved", assigned: "BSI Santos" },
-  { id: 4, complainant: "Liza Tan", type: "Standing Water", location: "Purok 2, Brgy. Rizal", date: "2026-03-03", status: "scheduled", assigned: "BSI Ramos" },
-  { id: 5, complainant: "Andres Reyes", type: "Foul Odor", location: "Purok 4, Brgy. San Jose", date: "2026-03-01", status: "completed", assigned: "BSI Santos" },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search } from "lucide-react";
+import { toast } from "sonner";
 
 const WastewaterServices = () => {
-  const { currentRole } = useRole();
+  const { currentRole } = useAuth();
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ complaint_type: "", location: "", description: "" });
   const isResident = currentRole === "Resident_User";
+  const queryClient = useQueryClient();
 
-  const filtered = mockComplaints.filter(
-    (c) => c.complainant.toLowerCase().includes(search.toLowerCase()) || c.type.toLowerCase().includes(search.toLowerCase())
+  const { data: complaints = [] } = useQuery({
+    queryKey: ["wastewater_complaints"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("wastewater_complaints").select("*").order("complaint_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("wastewater_complaints").insert({
+        complainant: "Current User",
+        complaint_type: form.complaint_type,
+        location: form.location,
+        description: form.description,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wastewater_complaints"] });
+      setOpen(false);
+      setForm({ complaint_type: "", location: "", description: "" });
+      toast.success("Complaint submitted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filtered = complaints.filter(
+    (c) => c.complainant.toLowerCase().includes(search.toLowerCase()) || c.complaint_type.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -36,17 +62,19 @@ const WastewaterServices = () => {
             {isResident ? "Submit and track sanitation complaints" : "Complaint management and service tracking"}
           </p>
         </div>
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> File Complaint</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle className="font-heading">New Sanitation Complaint</DialogTitle></DialogHeader>
             <div className="grid gap-3">
-              <div><Label className="text-xs">Complaint Type</Label><Input placeholder="e.g., Clogged Drainage" /></div>
-              <div><Label className="text-xs">Location</Label><Input placeholder="Purok, Barangay" /></div>
-              <div><Label className="text-xs">Description</Label><Textarea placeholder="Describe the issue..." rows={3} /></div>
-              <Button className="w-full">Submit Complaint</Button>
+              <div><Label className="text-xs">Complaint Type</Label><Input placeholder="e.g., Clogged Drainage" value={form.complaint_type} onChange={(e) => setForm({ ...form, complaint_type: e.target.value })} /></div>
+              <div><Label className="text-xs">Location</Label><Input placeholder="Purok, Barangay" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} /></div>
+              <div><Label className="text-xs">Description</Label><Textarea placeholder="Describe the issue..." rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+              <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.complaint_type}>
+                {addMutation.isPending ? "Submitting..." : "Submit Complaint"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -75,10 +103,10 @@ const WastewaterServices = () => {
               {filtered.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium text-sm">{c.complainant}</TableCell>
-                  <TableCell className="text-sm">{c.type}</TableCell>
+                  <TableCell className="text-sm">{c.complaint_type}</TableCell>
                   <TableCell className="text-sm hidden md:table-cell">{c.location}</TableCell>
-                  <TableCell className="text-sm hidden md:table-cell">{c.date}</TableCell>
-                  {!isResident && <TableCell className="text-sm hidden lg:table-cell">{c.assigned}</TableCell>}
+                  <TableCell className="text-sm hidden md:table-cell">{c.complaint_date}</TableCell>
+                  {!isResident && <TableCell className="text-sm hidden lg:table-cell">{c.assigned_to}</TableCell>}
                   <TableCell><StatusBadge status={c.status} /></TableCell>
                 </TableRow>
               ))}

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useRole } from "@/contexts/RoleContext";
+
 
 interface HealthIndexMeterProps {
   score: number;
