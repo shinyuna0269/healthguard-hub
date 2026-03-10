@@ -6,39 +6,59 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import StatusBadge from "@/components/StatusBadge";
-import { useRole } from "@/contexts/RoleContext";
-import { Plus, Search, FileCheck, Upload, ClipboardCheck } from "lucide-react";
-
-const mockPermits = [
-  { id: 1, business: "Aling Nena's Carinderia", owner: "Nena Gomez", type: "Food Establishment", date: "2026-03-01", status: "approved", inspector: "BSI Ramos" },
-  { id: 2, business: "JM Auto Repair", owner: "Jose Mendoza", type: "Workshop", date: "2026-02-28", status: "pending", inspector: "—" },
-  { id: 3, business: "Mang Tomas Bakery", owner: "Tomas Cruz", type: "Food Establishment", date: "2026-02-25", status: "rejected", inspector: "BSI Ramos" },
-  { id: 4, business: "GreenLeaf Pharmacy", owner: "Dr. Lim", type: "Pharmacy", date: "2026-02-20", status: "approved", inspector: "BSI Santos" },
-  { id: 5, business: "KTV Paradise", owner: "Kim Tan", type: "Entertainment", date: "2026-03-05", status: "in-progress", inspector: "BSI Ramos" },
-];
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Search, ClipboardCheck, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 const checklistItems = [
-  "Waste Segregation",
-  "Pest Control Measures",
-  "Clean Water Supply",
-  "Proper Drainage System",
-  "Food Handling Compliance",
-  "Ventilation Standards",
-  "Restroom Facilities",
-  "Fire Safety Equipment",
+  "Waste Segregation", "Pest Control Measures", "Clean Water Supply", "Proper Drainage System",
+  "Food Handling Compliance", "Ventilation Standards", "Restroom Facilities", "Fire Safety Equipment",
 ];
 
 const SanitationPermit = () => {
-  const { currentRole } = useRole();
+  const { currentRole } = useAuth();
   const [search, setSearch] = useState("");
   const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ business_name: "", owner_name: "", business_type: "", address: "", notes: "" });
   const isBSI = currentRole === "BSI_User";
+  const queryClient = useQueryClient();
 
-  const filtered = mockPermits.filter(
-    (p) => p.business.toLowerCase().includes(search.toLowerCase()) || p.owner.toLowerCase().includes(search.toLowerCase())
+  const { data: permits = [] } = useQuery({
+    queryKey: ["sanitation_permits"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sanitation_permits").select("*").order("application_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("sanitation_permits").insert({
+        business_name: form.business_name,
+        owner_name: form.owner_name,
+        business_type: form.business_type,
+        address: form.address,
+        notes: form.notes,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sanitation_permits"] });
+      setOpen(false);
+      setForm({ business_name: "", owner_name: "", business_type: "", address: "", notes: "" });
+      toast.success("Application submitted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const filtered = permits.filter(
+    (p) => p.business_name.toLowerCase().includes(search.toLowerCase()) || p.owner_name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -48,7 +68,7 @@ const SanitationPermit = () => {
           <h1 className="text-2xl font-bold font-heading">Sanitation Permit & Inspection</h1>
           <p className="text-sm text-muted-foreground">Permit applications, inspections, and compliance tracking</p>
         </div>
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1">
               {isBSI ? <><ClipboardCheck className="h-4 w-4" /> New Inspection</> : <><Plus className="h-4 w-4" /> Submit Application</>}
@@ -83,12 +103,14 @@ const SanitationPermit = () => {
               </div>
             ) : (
               <div className="grid gap-3">
-                <div><Label className="text-xs">Business Name</Label><Input placeholder="Business name" /></div>
-                <div><Label className="text-xs">Owner Name</Label><Input placeholder="Full name" /></div>
-                <div><Label className="text-xs">Business Type</Label><Input placeholder="e.g., Food Establishment" /></div>
-                <div><Label className="text-xs">Address</Label><Input placeholder="Business address" /></div>
-                <div><Label className="text-xs">Additional Notes</Label><Textarea rows={2} /></div>
-                <Button className="w-full">Submit Application</Button>
+                <div><Label className="text-xs">Business Name</Label><Input placeholder="Business name" value={form.business_name} onChange={(e) => setForm({ ...form, business_name: e.target.value })} /></div>
+                <div><Label className="text-xs">Owner Name</Label><Input placeholder="Full name" value={form.owner_name} onChange={(e) => setForm({ ...form, owner_name: e.target.value })} /></div>
+                <div><Label className="text-xs">Business Type</Label><Input placeholder="e.g., Food Establishment" value={form.business_type} onChange={(e) => setForm({ ...form, business_type: e.target.value })} /></div>
+                <div><Label className="text-xs">Address</Label><Input placeholder="Business address" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+                <div><Label className="text-xs">Additional Notes</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+                <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.business_name || !form.owner_name}>
+                  {addMutation.isPending ? "Submitting..." : "Submit Application"}
+                </Button>
               </div>
             )}
           </DialogContent>
@@ -117,10 +139,10 @@ const SanitationPermit = () => {
             <TableBody>
               {filtered.map((p) => (
                 <TableRow key={p.id}>
-                  <TableCell className="font-medium text-sm">{p.business}</TableCell>
-                  <TableCell className="text-sm hidden md:table-cell">{p.owner}</TableCell>
-                  <TableCell className="text-sm hidden md:table-cell">{p.type}</TableCell>
-                  <TableCell className="text-sm">{p.date}</TableCell>
+                  <TableCell className="font-medium text-sm">{p.business_name}</TableCell>
+                  <TableCell className="text-sm hidden md:table-cell">{p.owner_name}</TableCell>
+                  <TableCell className="text-sm hidden md:table-cell">{p.business_type}</TableCell>
+                  <TableCell className="text-sm">{p.application_date}</TableCell>
                   <TableCell className="text-sm hidden lg:table-cell">{p.inspector}</TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                 </TableRow>

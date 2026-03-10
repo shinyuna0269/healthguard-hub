@@ -8,22 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from "@/components/StatusBadge";
 import StatCard from "@/components/StatCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Syringe, Baby, Weight, Calendar } from "lucide-react";
-
-const mockVaccinations = [
-  { id: 1, child: "Baby Ella Santos", age: "6 months", vaccine: "BCG", date: "2026-03-05", status: "completed", bhw: "Maria Cruz" },
-  { id: 2, child: "Marco Reyes Jr.", age: "1 year", vaccine: "MMR", date: "2026-03-10", status: "scheduled", bhw: "Ana Lim" },
-  { id: 3, child: "Sofia Garcia", age: "9 months", vaccine: "Measles", date: "2026-03-02", status: "completed", bhw: "Maria Cruz" },
-  { id: 4, child: "Luis Mendoza", age: "2 months", vaccine: "Penta", date: "2026-03-08", status: "completed", bhw: "Rosa Santos" },
-  { id: 5, child: "Anna Dela Cruz", age: "4 months", vaccine: "OPV", date: "2026-03-15", status: "scheduled", bhw: "Ana Lim" },
-];
-
-const nutritionRecords = [
-  { id: 1, child: "Baby Ella Santos", age: "6 months", weight: "7.2 kg", height: "65 cm", status: "Normal", purok: "Purok 1" },
-  { id: 2, child: "Marco Reyes Jr.", age: "1 year", weight: "8.1 kg", height: "72 cm", status: "Underweight", purok: "Purok 3" },
-  { id: 3, child: "Sofia Garcia", age: "9 months", weight: "8.5 kg", height: "70 cm", status: "Normal", purok: "Purok 2" },
-  { id: 4, child: "Luis Mendoza", age: "2 months", weight: "4.0 kg", height: "52 cm", status: "Normal", purok: "Purok 5" },
-];
+import { toast } from "sonner";
 
 const suggestedSchedule = [
   { week: "Week 1 (Mar 10-14)", purok: "Purok 5", children: 15 },
@@ -33,6 +21,46 @@ const suggestedSchedule = [
 
 const ImmunizationTracker = () => {
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ child_name: "", age: "", vaccine: "", vaccination_date: "" });
+  const queryClient = useQueryClient();
+
+  const { data: vaccinations = [] } = useQuery({
+    queryKey: ["vaccinations"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vaccinations").select("*").order("vaccination_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: nutritionRecords = [] } = useQuery({
+    queryKey: ["nutrition_records"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("nutrition_records").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("vaccinations").insert({
+        child_name: form.child_name,
+        age: form.age,
+        vaccine: form.vaccine,
+        vaccination_date: form.vaccination_date || new Date().toISOString().split("T")[0],
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["vaccinations"] });
+      setOpen(false);
+      setForm({ child_name: "", age: "", vaccine: "", vaccination_date: "" });
+      toast.success("Record saved");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-6">
@@ -41,7 +69,7 @@ const ImmunizationTracker = () => {
           <h1 className="text-2xl font-bold font-heading">Immunization & Nutrition Tracker</h1>
           <p className="text-sm text-muted-foreground">Vaccination records, nutrition monitoring, and scheduling</p>
         </div>
-        <Dialog>
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Add Record</Button>
           </DialogTrigger>
@@ -49,21 +77,23 @@ const ImmunizationTracker = () => {
             <DialogHeader><DialogTitle className="font-heading">Add Immunization Record</DialogTitle></DialogHeader>
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Child Name</Label><Input placeholder="Full name" /></div>
-                <div><Label className="text-xs">Age</Label><Input placeholder="e.g., 6 months" /></div>
+                <div><Label className="text-xs">Child Name</Label><Input placeholder="Full name" value={form.child_name} onChange={(e) => setForm({ ...form, child_name: e.target.value })} /></div>
+                <div><Label className="text-xs">Age</Label><Input placeholder="e.g., 6 months" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
               </div>
-              <div><Label className="text-xs">Vaccine</Label><Input placeholder="Vaccine name" /></div>
-              <div><Label className="text-xs">Date</Label><Input type="date" /></div>
-              <Button className="w-full">Save Record</Button>
+              <div><Label className="text-xs">Vaccine</Label><Input placeholder="Vaccine name" value={form.vaccine} onChange={(e) => setForm({ ...form, vaccine: e.target.value })} /></div>
+              <div><Label className="text-xs">Date</Label><Input type="date" value={form.vaccination_date} onChange={(e) => setForm({ ...form, vaccination_date: e.target.value })} /></div>
+              <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.child_name || !form.vaccine}>
+                {addMutation.isPending ? "Saving..." : "Save Record"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard title="Total Vaccinations" value="3,891" icon={Syringe} trend={{ value: 5.2, label: "this month" }} />
-        <StatCard title="Children Monitored" value="542" icon={Baby} />
-        <StatCard title="Underweight Cases" value="23" icon={Weight} description="Requires follow-up" />
+        <StatCard title="Total Vaccinations" value={String(vaccinations.length)} icon={Syringe} />
+        <StatCard title="Children Monitored" value={String(nutritionRecords.length)} icon={Baby} />
+        <StatCard title="Underweight Cases" value={String(nutritionRecords.filter(n => n.status === "Underweight").length)} icon={Weight} description="Requires follow-up" />
       </div>
 
       <Tabs defaultValue="vaccination">
@@ -94,13 +124,13 @@ const ImmunizationTracker = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockVaccinations.map((v) => (
+                  {vaccinations.filter(v => v.child_name.toLowerCase().includes(search.toLowerCase())).map((v) => (
                     <TableRow key={v.id}>
-                      <TableCell className="font-medium text-sm">{v.child}</TableCell>
+                      <TableCell className="font-medium text-sm">{v.child_name}</TableCell>
                       <TableCell className="text-sm">{v.age}</TableCell>
                       <TableCell className="text-sm">{v.vaccine}</TableCell>
-                      <TableCell className="text-sm hidden md:table-cell">{v.date}</TableCell>
-                      <TableCell className="text-sm hidden md:table-cell">{v.bhw}</TableCell>
+                      <TableCell className="text-sm hidden md:table-cell">{v.vaccination_date}</TableCell>
+                      <TableCell className="text-sm hidden md:table-cell">{v.bhw_name}</TableCell>
                       <TableCell><StatusBadge status={v.status} /></TableCell>
                     </TableRow>
                   ))}
@@ -127,7 +157,7 @@ const ImmunizationTracker = () => {
                 <TableBody>
                   {nutritionRecords.map((n) => (
                     <TableRow key={n.id}>
-                      <TableCell className="font-medium text-sm">{n.child}</TableCell>
+                      <TableCell className="font-medium text-sm">{n.child_name}</TableCell>
                       <TableCell className="text-sm">{n.age}</TableCell>
                       <TableCell className="text-sm">{n.weight}</TableCell>
                       <TableCell className="text-sm hidden md:table-cell">{n.height}</TableCell>
