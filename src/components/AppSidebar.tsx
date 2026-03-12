@@ -15,7 +15,7 @@ import {
   CreditCard,
   FileText,
   MessageSquare,
-  QrCodeScan,
+  ScanLine,
   UserSearch,
   UserPlus,
   Map,

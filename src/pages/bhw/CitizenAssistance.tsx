@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { QrCodeScan, Search, UserPlus } from "lucide-react";
+import { ScanLine, Search, UserPlus } from "lucide-react";
 
 const CitizenAssistance = () => {
   const [qrValue, setQrValue] = useState("");
