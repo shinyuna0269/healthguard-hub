@@ -77,7 +77,7 @@ const bhwSections: NavSection[] = [
   {
     label: "Citizen Assistance",
     items: [
-      { title: "Scan QR Citizen ID", url: "/bhw/citizen-assistance", icon: QrCodeScan },
+      { title: "Scan QR Citizen ID", url: "/bhw/citizen-assistance", icon: ScanLine },
       { title: "Search Citizen", url: "/bhw/citizen-assistance", icon: UserSearch },
       { title: "Register Citizen", url: "/bhw/citizen-assistance", icon: UserPlus },
     ],
