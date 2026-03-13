@@ -364,7 +364,7 @@ export function AppSidebar() {
         )}
 
         {sections.map((section) => (
-          <SidebarGroup key={section.label}>
+          <SidebarGroup key={section.label} className="py-1">
             <SidebarGroupLabel className="text-sidebar-foreground/50 text-[10px] uppercase tracking-wider py-1">
               {section.label}
             </SidebarGroupLabel>
