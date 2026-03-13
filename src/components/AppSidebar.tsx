@@ -348,7 +348,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="sidebar-gradient border-r-0">
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto scrollbar-none">
         {!collapsed && (
           <div className="px-4 py-4">
             <div className="flex items-center gap-2.5">
