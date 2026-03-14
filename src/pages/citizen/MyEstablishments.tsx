@@ -6,17 +6,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import StatusBadge from "@/components/StatusBadge";
+import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Building2 } from "lucide-react";
+import { Plus, Building2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_verification: "Submitted",
+  submitted: "Submitted",
+  under_review: "Under Review",
+  requires_correction: "Correction Required",
+  inspection_scheduled: "Inspection Scheduled",
+  inspection_completed: "Inspection Completed",
+  registered: "Approved",
+  approved: "Approved",
+  certificate_issued: "Certificate Issued",
+  completed: "Completed",
+  rejected: "Rejected",
+};
 
 const MyEstablishments = () => {
   const { user, userName } = useAuth();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({
+  const emptyForm = {
     business_name: "",
     business_type: "",
     address: "",
@@ -25,7 +44,8 @@ const MyEstablishments = () => {
     business_permit_number: "",
     issuing_lgu: "",
     permit_expiry_date: "",
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const { data: establishments = [] } = useQuery({
     queryKey: ["citizen_establishments", user?.id],
@@ -56,21 +76,87 @@ const MyEstablishments = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["citizen_establishments"] });
       setOpen(false);
-      setForm({ business_name: "", business_type: "", address: "", barangay: "", contact_number: "", business_permit_number: "", issuing_lgu: "", permit_expiry_date: "" });
-      toast.success("Establishment registration submitted for verification");
+      setForm(emptyForm);
+      toast.success("Establishment registration submitted");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const statusLabel = (s: string) => {
-    const map: Record<string, string> = {
-      pending_verification: "Pending Verification",
-      registered: "Registered",
-      requires_correction: "Requires Correction",
-      rejected: "Rejected",
-    };
-    return map[s] || s;
+  const updateMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingId) return;
+      const { error } = await supabase.from("establishments").update({
+        business_name: form.business_name,
+        business_type: form.business_type,
+        address: form.address,
+        barangay: form.barangay,
+        contact_number: form.contact_number,
+        business_permit_number: form.business_permit_number,
+        issuing_lgu: form.issuing_lgu,
+        permit_expiry_date: form.permit_expiry_date || null,
+        status: "pending_verification",
+        reviewer_notes: null,
+      }).eq("id", editingId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["citizen_establishments"] });
+      setEditOpen(false);
+      setEditingId(null);
+      setForm(emptyForm);
+      toast.success("Establishment resubmitted for verification");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("establishments").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["citizen_establishments"] });
+      toast.success("Establishment registration deleted");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const openEdit = (e: any) => {
+    setEditingId(e.id);
+    setForm({
+      business_name: e.business_name || "",
+      business_type: e.business_type || "",
+      address: e.address || "",
+      barangay: e.barangay || "",
+      contact_number: e.contact_number || "",
+      business_permit_number: e.business_permit_number || "",
+      issuing_lgu: e.issuing_lgu || "",
+      permit_expiry_date: e.permit_expiry_date || "",
+    });
+    setEditOpen(true);
   };
+
+  const openDetail = (e: any) => {
+    setSelectedRecord(e);
+    setDetailOpen(true);
+  };
+
+  const canEdit = (status: string) => status === "requires_correction";
+  const canDelete = (status: string) => status === "pending_verification" || status === "submitted";
+
+  const renderFormFields = () => (
+    <div className="grid gap-3">
+      <div><Label className="text-xs">Business Name *</Label><Input value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} /></div>
+      <div><Label className="text-xs">Business Type</Label><Input placeholder="e.g., Food, Retail" value={form.business_type} onChange={e => setForm({ ...form, business_type: e.target.value })} /></div>
+      <div><Label className="text-xs">Address</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
+      <div><Label className="text-xs">Barangay</Label><Input value={form.barangay} onChange={e => setForm({ ...form, barangay: e.target.value })} /></div>
+      <div><Label className="text-xs">Owner Name</Label><Input value={userName} disabled className="bg-muted" /></div>
+      <div><Label className="text-xs">Contact Number</Label><Input value={form.contact_number} onChange={e => setForm({ ...form, contact_number: e.target.value })} /></div>
+      <div><Label className="text-xs">Business Permit Number</Label><Input value={form.business_permit_number} onChange={e => setForm({ ...form, business_permit_number: e.target.value })} /></div>
+      <div><Label className="text-xs">Issuing LGU</Label><Input value={form.issuing_lgu} onChange={e => setForm({ ...form, issuing_lgu: e.target.value })} /></div>
+      <div><Label className="text-xs">Business Permit Expiry Date</Label><Input type="date" value={form.permit_expiry_date} onChange={e => setForm({ ...form, permit_expiry_date: e.target.value })} /></div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -85,24 +171,49 @@ const MyEstablishments = () => {
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-heading">Register New Establishment</DialogTitle></DialogHeader>
-            <div className="grid gap-3">
-              <div><Label className="text-xs">Business Name *</Label><Input value={form.business_name} onChange={e => setForm({ ...form, business_name: e.target.value })} /></div>
-              <div><Label className="text-xs">Business Type</Label><Input placeholder="e.g., Food, Retail" value={form.business_type} onChange={e => setForm({ ...form, business_type: e.target.value })} /></div>
-              <div><Label className="text-xs">Address</Label><Input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} /></div>
-              <div><Label className="text-xs">Barangay</Label><Input value={form.barangay} onChange={e => setForm({ ...form, barangay: e.target.value })} /></div>
-              <div><Label className="text-xs">Owner Name</Label><Input value={userName} disabled className="bg-muted" /></div>
-              <div><Label className="text-xs">Contact Number</Label><Input value={form.contact_number} onChange={e => setForm({ ...form, contact_number: e.target.value })} /></div>
-              <div><Label className="text-xs">Business Permit Number</Label><Input value={form.business_permit_number} onChange={e => setForm({ ...form, business_permit_number: e.target.value })} /></div>
-              <div><Label className="text-xs">Issuing LGU</Label><Input value={form.issuing_lgu} onChange={e => setForm({ ...form, issuing_lgu: e.target.value })} /></div>
-              <div><Label className="text-xs">Business Permit Expiry Date</Label><Input type="date" value={form.permit_expiry_date} onChange={e => setForm({ ...form, permit_expiry_date: e.target.value })} /></div>
-              <p className="text-xs text-muted-foreground">After submission, Sanitation Office Staff will verify your registration before approval.</p>
-              <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.business_name}>
-                {addMutation.isPending ? "Submitting..." : "Submit for Verification"}
-              </Button>
-            </div>
+            {renderFormFields()}
+            <p className="text-xs text-muted-foreground">After submission, Sanitation Office Staff will verify your registration.</p>
+            <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.business_name}>
+              {addMutation.isPending ? "Submitting..." : "Submit for Verification"}
+            </Button>
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit & Resubmit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-heading">Edit & Resubmit Establishment</DialogTitle></DialogHeader>
+          {renderFormFields()}
+          <p className="text-xs text-muted-foreground">Correcting and resubmitting will send this back for review.</p>
+          <Button className="w-full" onClick={() => updateMutation.mutate()} disabled={updateMutation.isPending || !form.business_name}>
+            {updateMutation.isPending ? "Resubmitting..." : "Resubmit for Verification"}
+          </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      {selectedRecord && (
+        <RecordDetailModal
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title="Establishment Details"
+          fields={[
+            { label: "Business Name", value: selectedRecord.business_name },
+            { label: "Business Type", value: selectedRecord.business_type },
+            { label: "Owner", value: selectedRecord.owner_name },
+            { label: "Address", value: selectedRecord.address },
+            { label: "Barangay", value: selectedRecord.barangay },
+            { label: "Contact Number", value: selectedRecord.contact_number },
+            { label: "Business Permit #", value: selectedRecord.business_permit_number },
+            { label: "Issuing LGU", value: selectedRecord.issuing_lgu },
+            { label: "Permit Expiry", value: selectedRecord.permit_expiry_date },
+            { label: "Status", value: STATUS_LABELS[selectedRecord.status] || selectedRecord.status, isStatus: true },
+            { label: "Submitted", value: new Date(selectedRecord.created_at).toLocaleDateString() },
+            { label: "Reviewer Notes", value: selectedRecord.reviewer_notes },
+          ]}
+        />
+      )}
 
       <Card className="glass-card">
         <CardHeader><CardTitle className="text-sm font-heading">Registered Establishments</CardTitle></CardHeader>
@@ -122,16 +233,31 @@ const MyEstablishments = () => {
                   <TableHead className="text-xs hidden md:table-cell">Address</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Permit #</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {establishments.map(e => (
-                  <TableRow key={e.id}>
+                  <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetail(e)}>
                     <TableCell className="font-medium text-sm">{e.business_name}</TableCell>
                     <TableCell className="text-sm">{e.business_type}</TableCell>
                     <TableCell className="text-sm hidden md:table-cell">{e.address}</TableCell>
                     <TableCell className="text-sm hidden md:table-cell">{e.business_permit_number}</TableCell>
-                    <TableCell><StatusBadge status={statusLabel(e.status)} /></TableCell>
+                    <TableCell><StatusBadge status={STATUS_LABELS[e.status] || e.status} /></TableCell>
+                    <TableCell onClick={ev => ev.stopPropagation()}>
+                      <div className="flex gap-1">
+                        {canEdit(e.status) && (
+                          <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => openEdit(e)}>
+                            <Pencil className="h-3 w-3" /> Edit & Resubmit
+                          </Button>
+                        )}
+                        {canDelete(e.status) && (
+                          <Button variant="ghost" size="sm" className="gap-1 text-xs text-destructive" onClick={() => deleteMutation.mutate(e.id)}>
+                            <Trash2 className="h-3 w-3" /> Delete
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -139,10 +265,13 @@ const MyEstablishments = () => {
           )}
           {establishments.some(e => e.status === "requires_correction" && e.reviewer_notes) && (
             <div className="mt-4 space-y-2">
-              {establishments.filter(e => e.reviewer_notes).map(e => (
+              {establishments.filter(e => e.reviewer_notes && e.status === "requires_correction").map(e => (
                 <div key={e.id} className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                   <p className="text-xs font-medium text-destructive">{e.business_name} — Correction Required:</p>
                   <p className="text-xs text-muted-foreground mt-1">{e.reviewer_notes}</p>
+                  <Button variant="outline" size="sm" className="mt-2 gap-1 text-xs" onClick={() => openEdit(e)}>
+                    <Pencil className="h-3 w-3" /> Edit & Resubmit
+                  </Button>
                 </div>
               ))}
             </div>

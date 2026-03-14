@@ -30,6 +30,7 @@ interface AuthContextType {
   userName: string;
   loading: boolean;
   hasEstablishments: boolean;
+  hasRegisteredEstablishments: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -43,11 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userName, setUserName] = useState("");
   const [loading, setLoading] = useState(true);
   const [hasEstablishments, setHasEstablishments] = useState(false);
+  const [hasRegisteredEstablishments, setHasRegisteredEstablishments] = useState(false);
 
   const fetchUserRole = async (userId: string) => {
     const { data } = await supabase.rpc('get_user_role', { _user_id: userId });
     if (data) {
-      // Treat Business Owner accounts as unified Citizen users in the app
       const mappedRole = data === "BusinessOwner_User" ? "Citizen_User" : (data as UserRole);
       setCurrentRole(mappedRole);
     }
@@ -67,10 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchEstablishments = async (userId: string) => {
     const { data } = await supabase
       .from('establishments')
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1);
+      .select('id, status')
+      .eq('user_id', userId);
     setHasEstablishments(!!(data && data.length > 0));
+    setHasRegisteredEstablishments(!!(data && data.some((e: { status: string }) => e.status === 'registered')));
   };
 
   const fetchUserData = (userId: string) => {
@@ -91,6 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setCurrentRole("Citizen_User");
           setUserName("");
           setHasEstablishments(false);
+          setHasRegisteredEstablishments(false);
         }
         setLoading(false);
       }
@@ -120,10 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCurrentRole("Citizen_User");
     setUserName("");
     setHasEstablishments(false);
+    setHasRegisteredEstablishments(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, currentRole, userName, loading, hasEstablishments, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, currentRole, userName, loading, hasEstablishments, hasRegisteredEstablishments, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StatusBadge from "@/components/StatusBadge";
+import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +17,8 @@ import { toast } from "sonner";
 const SanitationComplaints = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [form, setForm] = useState({ complaint_type: "", location: "", description: "" });
   const queryClient = useQueryClient();
 
@@ -38,7 +41,6 @@ const SanitationComplaints = () => {
         description: form.description,
       }).select("id").single();
       if (error) throw error;
-      // Also create a routed service request record
       await supabase.from("service_requests").insert({
         user_id: user!.id,
         request_type: "Sanitation Complaint",
@@ -82,6 +84,22 @@ const SanitationComplaints = () => {
         </Dialog>
       </div>
 
+      {selectedRecord && (
+        <RecordDetailModal
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title="Complaint Details"
+          fields={[
+            { label: "Date", value: selectedRecord.complaint_date },
+            { label: "Type", value: selectedRecord.complaint_type },
+            { label: "Location", value: selectedRecord.location },
+            { label: "Description", value: selectedRecord.description },
+            { label: "Status", value: selectedRecord.status, isStatus: true },
+            { label: "Submitted", value: new Date(selectedRecord.created_at).toLocaleDateString() },
+          ]}
+        />
+      )}
+
       <Card className="glass-card">
         <CardHeader><CardTitle className="text-sm font-heading">Complaint History</CardTitle></CardHeader>
         <CardContent>
@@ -99,7 +117,7 @@ const SanitationComplaints = () => {
               </TableHeader>
               <TableBody>
                 {complaints.map(c => (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(c); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{c.complaint_date}</TableCell>
                     <TableCell className="text-sm">{c.complaint_type}</TableCell>
                     <TableCell className="text-sm">{c.location}</TableCell>
