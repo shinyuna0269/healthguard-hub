@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "@/components/StatusBadge";
+import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +10,8 @@ import { FileText } from "lucide-react";
 
 const ServiceRequests = () => {
   const { user } = useAuth();
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
 
   const { data: requests = [] } = useQuery({
     queryKey: ["citizen_service_requests", user?.id],
@@ -25,6 +29,22 @@ const ServiceRequests = () => {
         <h1 className="text-2xl font-bold font-heading">My Service Requests</h1>
         <p className="text-sm text-muted-foreground">Track all your service requests across modules</p>
       </div>
+
+      {selectedRecord && (
+        <RecordDetailModal
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title="Service Request Details"
+          fields={[
+            { label: "Title", value: selectedRecord.title },
+            { label: "Type", value: selectedRecord.request_type },
+            { label: "Description", value: selectedRecord.description },
+            { label: "Status", value: selectedRecord.status, isStatus: true },
+            { label: "Submitted", value: new Date(selectedRecord.created_at).toLocaleDateString() },
+            { label: "Last Updated", value: new Date(selectedRecord.updated_at).toLocaleDateString() },
+          ]}
+        />
+      )}
 
       <Card className="glass-card">
         <CardHeader><CardTitle className="text-sm font-heading">All Requests</CardTitle></CardHeader>
@@ -48,7 +68,7 @@ const ServiceRequests = () => {
               </TableHeader>
               <TableBody>
                 {requests.map(r => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(r); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{new Date(r.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm">{r.request_type}</TableCell>
                     <TableCell className="font-medium text-sm">{r.title}</TableCell>

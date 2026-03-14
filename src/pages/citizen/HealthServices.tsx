@@ -9,12 +9,15 @@ import { HeartPulse, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import RecordDetailModal from "@/components/RecordDetailModal";
 import { toast } from "sonner";
 
 const HealthServices = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [concern, setConcern] = useState("");
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const queryClient = useQueryClient();
 
   const { data: records = [] } = useQuery({
@@ -56,29 +59,16 @@ const HealthServices = () => {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> Request Consultation
-            </Button>
+            <Button size="sm" className="gap-1"><Plus className="h-4 w-4" /> Request Consultation</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="font-heading text-sm">Request Health Consultation</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle className="font-heading text-sm">Request Health Consultation</DialogTitle></DialogHeader>
             <div className="grid gap-3">
               <div>
                 <Label className="text-xs">Describe your health concern</Label>
-                <Textarea
-                  rows={3}
-                  placeholder="Briefly describe your symptoms or concern..."
-                  value={concern}
-                  onChange={(e) => setConcern(e.target.value)}
-                />
+                <Textarea rows={3} placeholder="Briefly describe your symptoms or concern..." value={concern} onChange={(e) => setConcern(e.target.value)} />
               </div>
-              <Button
-                className="w-full"
-                onClick={() => requestMutation.mutate()}
-                disabled={requestMutation.isPending}
-              >
+              <Button className="w-full" onClick={() => requestMutation.mutate()} disabled={requestMutation.isPending}>
                 {requestMutation.isPending ? "Submitting..." : "Submit Consultation Request"}
               </Button>
             </div>
@@ -110,10 +100,24 @@ const HealthServices = () => {
         </Card>
       </div>
 
+      {selectedRecord && (
+        <RecordDetailModal
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title="Health Record Details"
+          fields={[
+            { label: "Date", value: selectedRecord.record_date },
+            { label: "Type", value: selectedRecord.record_type },
+            { label: "Diagnosis", value: selectedRecord.diagnosis },
+            { label: "Medicine", value: selectedRecord.medicine },
+            { label: "Provider", value: selectedRecord.provider },
+            { label: "Submitted", value: new Date(selectedRecord.created_at).toLocaleDateString() },
+          ]}
+        />
+      )}
+
       <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="text-sm font-heading">Recent Health Records</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-sm font-heading">Recent Health Records</CardTitle></CardHeader>
         <CardContent>
           {records.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No health records found.</p>
@@ -130,7 +134,7 @@ const HealthServices = () => {
               </TableHeader>
               <TableBody>
                 {records.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(r); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{r.record_date}</TableCell>
                     <TableCell className="text-sm">{r.record_type}</TableCell>
                     <TableCell className="text-sm">{r.diagnosis}</TableCell>

@@ -7,15 +7,18 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import StatusBadge from "@/components/StatusBadge";
+import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, ShieldAlert } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
 const DiseaseReporting = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [form, setForm] = useState({ disease: "", location: "", details: "" });
   const queryClient = useQueryClient();
 
@@ -39,7 +42,6 @@ const DiseaseReporting = () => {
         reporter: "Citizen Report",
       }).select("id").single();
       if (error) throw error;
-      // Also create a routed service request record
       await supabase.from("service_requests").insert({
         user_id: user!.id,
         request_type: "Disease Report",
@@ -83,6 +85,23 @@ const DiseaseReporting = () => {
         </Dialog>
       </div>
 
+      {selectedRecord && (
+        <RecordDetailModal
+          open={detailOpen}
+          onOpenChange={setDetailOpen}
+          title="Disease Report Details"
+          fields={[
+            { label: "Date", value: selectedRecord.case_date },
+            { label: "Disease", value: selectedRecord.disease },
+            { label: "Location", value: selectedRecord.patient_location },
+            { label: "Details", value: selectedRecord.details },
+            { label: "Case Count", value: selectedRecord.case_count },
+            { label: "Status", value: selectedRecord.status, isStatus: true },
+            { label: "Submitted", value: new Date(selectedRecord.created_at).toLocaleDateString() },
+          ]}
+        />
+      )}
+
       <Card className="glass-card">
         <CardHeader><CardTitle className="text-sm font-heading">My Submitted Reports</CardTitle></CardHeader>
         <CardContent>
@@ -100,7 +119,7 @@ const DiseaseReporting = () => {
               </TableHeader>
               <TableBody>
                 {cases.map(c => (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(c); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{c.case_date}</TableCell>
                     <TableCell className="text-sm">{c.disease}</TableCell>
                     <TableCell className="text-sm">{c.patient_location}</TableCell>
