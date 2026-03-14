@@ -9,7 +9,7 @@ const CitizenQR = () => {
   const citizenId = `GSMS-2026-${user?.id?.slice(0, 8).toUpperCase() || "UNKNOWN"}`;
 
   const handlePrint = () => {
-    const svg = document.getElementById("citizen-qr-svg") as SVGSVGElement | null;
+    const svg = document.getElementById("citizen-qr-svg") as unknown as SVGSVGElement | null;
     const qrMarkup = svg ? svg.outerHTML : "";
 
     const printWindow = window.open("", "_blank", "noopener,noreferrer,width=480,height=640");
