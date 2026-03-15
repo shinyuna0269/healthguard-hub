@@ -98,8 +98,8 @@ const SanitationPermit = () => {
   const confirmPaymentMutation = useMutation({
     mutationFn: async (app: any) => {
       if (!app.payment_id) throw new Error("No payment linked");
-      await supabase.from("payments").update({ status: "confirmed", paid_at: new Date().toISOString() }).eq("id", app.payment_id);
-      await supabase.from("sanitary_permit_applications").update({ status: "payment_confirmed" }).eq("id", app.id);
+      await (supabase as any).from("payments").update({ status: "confirmed", paid_at: new Date().toISOString() }).eq("id", app.payment_id);
+      await (supabase as any).from("sanitary_permit_applications").update({ status: "payment_confirmed" }).eq("id", app.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff_sanitary_applications"] });
