@@ -194,7 +194,7 @@ const SanitationPermit = () => {
       const issued = new Date();
       const expiry = new Date(issued);
       expiry.setFullYear(expiry.getFullYear() + 1);
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "permit_issued",

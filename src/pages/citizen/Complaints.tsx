@@ -75,12 +75,11 @@ const Complaints = () => {
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_attachment = path;
       }
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitation_complaints")
         .insert({
           citizen_id: user!.id,
           complaint_type: form.complaint_type,
-          location: form.location || null,
           barangay: form.barangay,
           description: form.description || null,
           photo_attachment,
