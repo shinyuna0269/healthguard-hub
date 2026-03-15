@@ -27,8 +27,8 @@ const REPORT_STATUSES = [
 const BhwCommunityReports = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [disease, setDisease] = useState(DISEASES[0]);
-  const [barangay, setBarangay] = useState(QC_BARANGAYS[0]);
+  const [disease, setDisease] = useState<string>(DISEASES[0]);
+  const [barangay, setBarangay] = useState<string>(QC_BARANGAYS[0]);
   const [details, setDetails] = useState("");
   const [citizenId, setCitizenId] = useState("");
 
