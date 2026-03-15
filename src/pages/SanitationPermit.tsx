@@ -58,12 +58,12 @@ const SanitationPermit = () => {
   const { data: applications = [] } = useQuery({
     queryKey: ["staff_sanitary_applications", currentRole, user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitary_permit_applications")
         .select("*")
         .order("applied_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
