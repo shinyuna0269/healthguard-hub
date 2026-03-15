@@ -31,7 +31,7 @@ const WaterwayCleanupReport = () => {
   const { data: reports = [] } = useQuery({
     queryKey: ["citizen_waterway_reports", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("waterway_cleanup_reports")
         .select("*")
         .eq("user_id", user!.id)
