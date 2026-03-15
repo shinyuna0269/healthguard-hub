@@ -74,9 +74,9 @@ const StaffPermitVerification = () => {
         })
         .eq("id", id);
       if (error) throw error;
-      const { data: notif } = await supabase.from("establishment_notifications").select("id").eq("establishment_id", id).maybeSingle();
+      const { data: notif } = await (supabase as any).from("establishment_notifications").select("id").eq("establishment_id", id).maybeSingle();
       if (notif) {
-        await supabase.from("establishment_notifications").update({ read_by_clerk: true, read_by_bsi: true }).eq("id", notif.id);
+        await (supabase as any).from("establishment_notifications").update({ read_by_clerk: true, read_by_bsi: true }).eq("id", notif.id);
       }
     },
     onSuccess: () => {

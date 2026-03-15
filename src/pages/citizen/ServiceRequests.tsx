@@ -116,7 +116,7 @@ const ServiceRequests = () => {
           status: "submitted",
         });
       } else {
-        const { data: env, error: envErr } = await supabase
+        const { data: env, error: envErr } = await (supabase as any)
           .from("environmental_compliance_requests")
           .insert({
             user_id: user!.id,

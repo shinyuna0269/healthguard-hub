@@ -71,7 +71,7 @@ const WaterwayCleanupReport = () => {
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_url = path;
       }
-      const { error } = await supabase.from("waterway_cleanup_reports").insert({
+      const { error } = await (supabase as any).from("waterway_cleanup_reports").insert({
         user_id: user!.id,
         report_type: form.report_type,
         location: form.location,
