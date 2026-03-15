@@ -56,7 +56,7 @@ const Complaints = () => {
         (c) =>
           (c.complaint_type || "").toLowerCase().includes(q) ||
           (c.barangay || "").toLowerCase().includes(q) ||
-          (c.location || "").toLowerCase().includes(q) ||
+          (c.barangay || "").toLowerCase().includes(q) ||
           (c.description || "").toLowerCase().includes(q) ||
           (c.status || "").toLowerCase().includes(q)
       );
