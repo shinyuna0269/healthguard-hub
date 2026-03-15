@@ -123,13 +123,13 @@ const SanitationPermit = () => {
 
   const scheduleInspectionMutation = useMutation({
     mutationFn: async ({ app, date, notes }: { app: any; date: string; notes: string }) => {
-      await supabase.from("sanitary_inspections").insert({
+      await (supabase as any).from("sanitary_inspections").insert({
         application_id: app.id,
         inspector_id: user?.id,
         scheduled_date: date,
         status: "scheduled",
       });
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "inspection_scheduled",
