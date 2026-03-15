@@ -35,7 +35,7 @@ const BhwComplaints = () => {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("sanitation_complaints").insert({
+      const { error } = await (supabase as any).from("sanitation_complaints").insert({
         citizen_id: user!.id,
         complaint_type: complaintType,
         barangay,

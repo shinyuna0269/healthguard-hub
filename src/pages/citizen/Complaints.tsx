@@ -37,7 +37,7 @@ const Complaints = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["citizen_complaints", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitation_complaints")
         .select("*")
         .eq("citizen_id", user!.id)

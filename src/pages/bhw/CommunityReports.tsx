@@ -79,14 +79,14 @@ const BhwCommunityReports = () => {
 
   const verifyCaseMutation = useMutation({
     mutationFn: async (report: { id: string; disease: string; patient_location: string }) => {
-      const { error: insertError } = await supabase.from("surveillance_cases").insert({
+      const { error: insertError } = await (supabase as any).from("surveillance_cases").insert({
         disease: report.disease,
         patient_location: report.patient_location,
         case_date: new Date().toISOString().slice(0, 10),
         status: "active",
       });
       if (insertError) throw insertError;
-      const { error: updateError } = await supabase.from("surveillance_cases").update({ status: "Verified Case" }).eq("id", report.id);
+      const { error: updateError } = await (supabase as any).from("disease_reports").update({ status: "Verified Case" }).eq("id", report.id);
       if (updateError) throw updateError;
     },
     onSuccess: () => {

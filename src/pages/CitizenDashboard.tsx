@@ -20,7 +20,7 @@ const CitizenDashboard = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["citizen_complaints", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("sanitation_complaints").select("complaint_id, status").eq("citizen_id", user!.id);
+      const { data } = await (supabase as any).from("sanitation_complaints").select("complaint_id, status").eq("citizen_id", user!.id);
       return data || [];
     },
     enabled: !!user,
