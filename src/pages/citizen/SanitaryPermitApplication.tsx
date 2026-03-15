@@ -137,7 +137,7 @@ const SanitaryPermitApplication = () => {
         .single();
       if (payErr) throw payErr;
 
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           payment_id: payment.id,
