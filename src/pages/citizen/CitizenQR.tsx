@@ -70,7 +70,7 @@ const CitizenQR = () => {
     queryFn: async () => {
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, email, date_of_birth, blood_type, gender, address, contact_number")
+        .select("full_name, email")
         .eq("user_id", user!.id)
         .single();
       return data;
