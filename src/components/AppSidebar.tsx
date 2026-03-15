@@ -23,6 +23,7 @@ import {
   Users,
   PlugZap,
   Waves,
+  Droplets,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";

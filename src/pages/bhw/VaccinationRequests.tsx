@@ -134,8 +134,8 @@ const BhwVaccinationRequests = () => {
                 {vaccinations.map((v: any) => (
                   <TableRow key={v.id}>
                     <TableCell className="text-sm">{v.vaccination_date}</TableCell>
-                    <TableCell className="text-sm">{v.patient_name || v.child_name}</TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">{v.patient_type || "—"}</TableCell>
+                    <TableCell className="text-sm">{v.child_name}</TableCell>
+                    <TableCell className="text-sm hidden md:table-cell">{"—"}</TableCell>
                     <TableCell className="text-sm">{v.vaccine}</TableCell>
                     <TableCell>
                       <StatusBadge status={v.status} />

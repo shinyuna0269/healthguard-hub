@@ -31,7 +31,7 @@ const WaterwayCleanupReport = () => {
   const { data: reports = [] } = useQuery({
     queryKey: ["citizen_waterway_reports", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("waterway_cleanup_reports")
         .select("*")
         .eq("user_id", user!.id)
@@ -71,7 +71,7 @@ const WaterwayCleanupReport = () => {
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_url = path;
       }
-      const { error } = await supabase.from("waterway_cleanup_reports").insert({
+      const { error } = await (supabase as any).from("waterway_cleanup_reports").insert({
         user_id: user!.id,
         report_type: form.report_type,
         location: form.location,

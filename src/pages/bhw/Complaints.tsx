@@ -17,14 +17,14 @@ import { QC_BARANGAYS, SANITATION_COMPLAINT_TYPES } from "@/lib/constants";
 const BhwComplaints = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [complaintType, setComplaintType] = useState(SANITATION_COMPLAINT_TYPES[0]);
-  const [barangay, setBarangay] = useState(QC_BARANGAYS[0]);
+  const [complaintType, setComplaintType] = useState<string>(SANITATION_COMPLAINT_TYPES[0]);
+  const [barangay, setBarangay] = useState<string>(QC_BARANGAYS[0]);
   const [description, setDescription] = useState("");
 
   const { data: complaints = [] } = useQuery({
     queryKey: ["bhw_sanitation_complaints"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("sanitation_complaints")
         .select("*")
         .order("date_submitted", { ascending: false })
@@ -35,7 +35,7 @@ const BhwComplaints = () => {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("sanitation_complaints").insert({
+      const { error } = await (supabase as any).from("sanitation_complaints").insert({
         citizen_id: user!.id,
         complaint_type: complaintType,
         barangay,

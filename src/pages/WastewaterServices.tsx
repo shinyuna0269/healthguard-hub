@@ -16,7 +16,7 @@ const WastewaterServices = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["sanitation_complaints_all"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitation_complaints")
         .select("*")
         .order("date_submitted", { ascending: false });

@@ -27,15 +27,15 @@ const REPORT_STATUSES = [
 const BhwCommunityReports = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [disease, setDisease] = useState(DISEASES[0]);
-  const [barangay, setBarangay] = useState(QC_BARANGAYS[0]);
+  const [disease, setDisease] = useState<string>(DISEASES[0]);
+  const [barangay, setBarangay] = useState<string>(QC_BARANGAYS[0]);
   const [details, setDetails] = useState("");
   const [citizenId, setCitizenId] = useState("");
 
   const { data: reports = [] } = useQuery({
     queryKey: ["bhw_disease_reports"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("disease_reports")
         .select("*")
         .order("created_at", { ascending: false })
@@ -46,7 +46,7 @@ const BhwCommunityReports = () => {
 
   const reportMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("disease_reports").insert({
+      const { error } = await (supabase as any).from("disease_reports").insert({
         disease,
         patient_location: barangay,
         details: `Citizen ID: ${citizenId || "N/A"} — ${details}`,
@@ -67,7 +67,7 @@ const BhwCommunityReports = () => {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("disease_reports").update({ status }).eq("id", id);
+      const { error } = await (supabase as any).from("disease_reports").update({ status }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -79,17 +79,14 @@ const BhwCommunityReports = () => {
 
   const verifyCaseMutation = useMutation({
     mutationFn: async (report: { id: string; disease: string; patient_location: string }) => {
-      const coords = QC_BARANGAY_COORDS[report.patient_location] ?? [14.676, 121.0437];
-      const { error: insertError } = await supabase.from("disease_cases").insert({
-        disease_type: report.disease,
-        barangay: report.patient_location,
-        latitude: coords[0],
-        longitude: coords[1],
-        date_reported: new Date().toISOString().slice(0, 10),
-        status: "Reported",
+      const { error: insertError } = await (supabase as any).from("surveillance_cases").insert({
+        disease: report.disease,
+        patient_location: report.patient_location,
+        case_date: new Date().toISOString().slice(0, 10),
+        status: "active",
       });
       if (insertError) throw insertError;
-      const { error: updateError } = await supabase.from("disease_reports").update({ status: "Verified Case" }).eq("id", report.id);
+      const { error: updateError } = await (supabase as any).from("disease_reports").update({ status: "Verified Case" }).eq("id", report.id);
       if (updateError) throw updateError;
     },
     onSuccess: () => {

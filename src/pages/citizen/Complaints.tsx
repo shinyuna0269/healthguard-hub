@@ -37,7 +37,7 @@ const Complaints = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["citizen_complaints", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitation_complaints")
         .select("*")
         .eq("citizen_id", user!.id)
@@ -56,7 +56,7 @@ const Complaints = () => {
         (c) =>
           (c.complaint_type || "").toLowerCase().includes(q) ||
           (c.barangay || "").toLowerCase().includes(q) ||
-          (c.location || "").toLowerCase().includes(q) ||
+          (c.barangay || "").toLowerCase().includes(q) ||
           (c.description || "").toLowerCase().includes(q) ||
           (c.status || "").toLowerCase().includes(q)
       );
@@ -75,12 +75,11 @@ const Complaints = () => {
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_attachment = path;
       }
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitation_complaints")
         .insert({
           citizen_id: user!.id,
           complaint_type: form.complaint_type,
-          location: form.location || null,
           barangay: form.barangay,
           description: form.description || null,
           photo_attachment,
@@ -275,7 +274,7 @@ const Complaints = () => {
                   >
                     <TableCell className="text-sm">{c.date_submitted}</TableCell>
                     <TableCell className="text-sm">{c.complaint_type}</TableCell>
-                    <TableCell className="text-sm">{c.location ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{c.barangay ?? "—"}</TableCell>
                     <TableCell className="text-sm">{c.barangay}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />

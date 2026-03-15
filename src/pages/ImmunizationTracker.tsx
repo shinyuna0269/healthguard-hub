@@ -130,10 +130,10 @@ const ImmunizationTracker = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {vaccinations.filter(v => (v.patient_name || v.child_name || "").toLowerCase().includes(search.toLowerCase())).map((v) => (
+                  {vaccinations.filter(v => (v.child_name || "").toLowerCase().includes(search.toLowerCase())).map((v) => (
                     <TableRow key={v.id}>
-                      <TableCell className="font-medium text-sm">{v.patient_name || v.child_name}</TableCell>
-                      <TableCell className="text-sm hidden md:table-cell">{v.patient_type || "—"}</TableCell>
+                      <TableCell className="font-medium text-sm">{v.child_name}</TableCell>
+                      <TableCell className="text-sm hidden md:table-cell">{"—"}</TableCell>
                       <TableCell className="text-sm">{v.age}</TableCell>
                       <TableCell className="text-sm">{v.vaccine}</TableCell>
                       <TableCell className="text-sm hidden md:table-cell">{v.vaccination_date}</TableCell>

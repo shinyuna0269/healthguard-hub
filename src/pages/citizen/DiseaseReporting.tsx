@@ -27,7 +27,7 @@ const DiseaseReporting = () => {
   const { data: cases = [] } = useQuery({
     queryKey: ["citizen_disease_reports", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("disease_reports").select("*").eq("reported_by", user!.id).order("created_at", { ascending: false });
+      const { data, error } = await (supabase as any).from("disease_reports").select("*").eq("reported_by", user!.id).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -36,7 +36,7 @@ const DiseaseReporting = () => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from("disease_reports").insert({
+      const { data, error } = await (supabase as any).from("disease_reports").insert({
         disease: form.disease,
         patient_location: form.location,
         details: form.details,

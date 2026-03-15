@@ -93,7 +93,7 @@ const ServiceRequests = () => {
       }
 
       if (form.request_type === "Septic Tank Desludging") {
-        const { data: septic, error: septicErr } = await supabase
+        const { data: septic, error: septicErr } = await (supabase as any)
           .from("septic_desludging_requests")
           .insert({
             user_id: user!.id,
@@ -116,7 +116,7 @@ const ServiceRequests = () => {
           status: "submitted",
         });
       } else {
-        const { data: env, error: envErr } = await supabase
+        const { data: env, error: envErr } = await (supabase as any)
           .from("environmental_compliance_requests")
           .insert({
             user_id: user!.id,

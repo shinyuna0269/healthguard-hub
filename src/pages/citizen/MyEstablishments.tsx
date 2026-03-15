@@ -115,7 +115,7 @@ const MyEstablishments = () => {
       }
 
       try {
-        await supabase.from("establishment_notifications").insert({ establishment_id: establishmentId });
+        await (supabase as any).from("establishment_notifications").insert({ establishment_id: establishmentId });
       } catch {
         // table might not exist yet in dev
       }

@@ -58,19 +58,19 @@ const SanitationPermit = () => {
   const { data: applications = [] } = useQuery({
     queryKey: ["staff_sanitary_applications", currentRole, user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitary_permit_applications")
         .select("*")
         .order("applied_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data || [];
     },
   });
 
   const { data: inspectionsList = [] } = useQuery({
     queryKey: ["sanitary_inspections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sanitary_inspections").select("*").order("scheduled_date", { ascending: false });
+      const { data, error } = await (supabase as any).from("sanitary_inspections").select("*").order("scheduled_date", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -98,8 +98,8 @@ const SanitationPermit = () => {
   const confirmPaymentMutation = useMutation({
     mutationFn: async (app: any) => {
       if (!app.payment_id) throw new Error("No payment linked");
-      await supabase.from("payments").update({ status: "confirmed", paid_at: new Date().toISOString() }).eq("id", app.payment_id);
-      await supabase.from("sanitary_permit_applications").update({ status: "payment_confirmed" }).eq("id", app.id);
+      await (supabase as any).from("payments").update({ status: "confirmed", paid_at: new Date().toISOString() }).eq("id", app.payment_id);
+      await (supabase as any).from("sanitary_permit_applications").update({ status: "payment_confirmed" }).eq("id", app.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff_sanitary_applications"] });
@@ -123,13 +123,13 @@ const SanitationPermit = () => {
 
   const scheduleInspectionMutation = useMutation({
     mutationFn: async ({ app, date, notes }: { app: any; date: string; notes: string }) => {
-      await supabase.from("sanitary_inspections").insert({
+      await (supabase as any).from("sanitary_inspections").insert({
         application_id: app.id,
         inspector_id: user?.id,
         scheduled_date: date,
         status: "scheduled",
       });
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "inspection_scheduled",
@@ -154,7 +154,7 @@ const SanitationPermit = () => {
     mutationFn: async ({ app, result, correctionNotes }: { app: any; result: string; correctionNotes: string }) => {
       const insp = inspectionsList.find((i) => i.application_id === app.id && i.status === "scheduled");
       if (insp) {
-        await supabase
+        await (supabase as any)
           .from("sanitary_inspections")
           .update({
             status: "completed",
@@ -167,7 +167,7 @@ const SanitationPermit = () => {
           .eq("id", insp.id);
       }
       const newStatus = result === "passed" ? "permit_approved" : result === "correction_required" ? "correction_required" : "correction_required";
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: newStatus,
@@ -194,7 +194,7 @@ const SanitationPermit = () => {
       const issued = new Date();
       const expiry = new Date(issued);
       expiry.setFullYear(expiry.getFullYear() + 1);
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "permit_issued",

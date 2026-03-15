@@ -51,7 +51,7 @@ const VaccinationNutrition = () => {
   const { data: schedules = [] } = useQuery({
     queryKey: ["vaccination_schedules"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("vaccination_schedules")
         .select("*")
         .gte("schedule_date", new Date().toISOString().slice(0, 10))

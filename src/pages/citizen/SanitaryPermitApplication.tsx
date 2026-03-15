@@ -59,7 +59,7 @@ const SanitaryPermitApplication = () => {
   const { data: applications = [] } = useQuery({
     queryKey: ["citizen_sanitary_applications", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitary_permit_applications")
         .select("*")
         .eq("user_id", user!.id)
@@ -89,7 +89,7 @@ const SanitaryPermitApplication = () => {
       const appId = safeRandomId("").slice(0, 8).toUpperCase();
       const orderNum = `OP-QC-${new Date().getFullYear()}-${appId}`;
 
-      const { data: app, error: appErr } = await supabase
+      const { data: app, error: appErr } = await (supabase as any)
         .from("sanitary_permit_applications")
         .insert({
           establishment_id: selectedEstablishment.id,
@@ -123,7 +123,7 @@ const SanitaryPermitApplication = () => {
       const business_permit_url = docFiles.business_permit ? await upload("business_permit", docFiles.business_permit) : null;
       const valid_id_url = docFiles.valid_id ? await upload("valid_id", docFiles.valid_id) : null;
 
-      const { data: payment, error: payErr } = await supabase
+      const { data: payment, error: payErr } = await (supabase as any)
         .from("payments")
         .insert({
           user_id: user!.id,
@@ -137,7 +137,7 @@ const SanitaryPermitApplication = () => {
         .single();
       if (payErr) throw payErr;
 
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           payment_id: payment.id,
@@ -168,7 +168,7 @@ const SanitaryPermitApplication = () => {
       const path = `${user!.id}/sanitary_apps/${app.id}/reinspection_proof.${reinspectionFile.name.split(".").pop() || "pdf"}`;
       const { error: upErr } = await supabase.storage.from("documents").upload(path, reinspectionFile, { upsert: true });
       if (upErr) throw upErr;
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "reinspection_requested",
