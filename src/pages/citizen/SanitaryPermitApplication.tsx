@@ -59,7 +59,7 @@ const SanitaryPermitApplication = () => {
   const { data: applications = [] } = useQuery({
     queryKey: ["citizen_sanitary_applications", user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitary_permit_applications")
         .select("*")
         .eq("user_id", user!.id)
