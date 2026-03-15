@@ -123,7 +123,7 @@ const SanitaryPermitApplication = () => {
       const business_permit_url = docFiles.business_permit ? await upload("business_permit", docFiles.business_permit) : null;
       const valid_id_url = docFiles.valid_id ? await upload("valid_id", docFiles.valid_id) : null;
 
-      const { data: payment, error: payErr } = await supabase
+      const { data: payment, error: payErr } = await (supabase as any)
         .from("payments")
         .insert({
           user_id: user!.id,
