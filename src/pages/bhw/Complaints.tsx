@@ -24,7 +24,7 @@ const BhwComplaints = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["bhw_sanitation_complaints"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("sanitation_complaints")
         .select("*")
         .order("date_submitted", { ascending: false })
