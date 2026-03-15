@@ -286,10 +286,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error) return { error: error as Error };
       if (data.user) {
         await applyCitizenSession(data.user);
-        // Also sign into HSM Supabase with same credentials so all citizen services
-        // (which use the HSM database) can pass RLS policies.
-        // If the user does not exist in HSM, we silently ignore the error.
-        hsmSupabase.auth.signInWithPassword({ email, password }).catch(() => {});
       }
       return { error: null };
     } else {

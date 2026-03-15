@@ -208,19 +208,27 @@ const BhwComplaints = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Complaint ID</TableHead>
                   <TableHead className="text-xs">Type</TableHead>
-                  <TableHead className="text-xs">Barangay</TableHead>
+                  <TableHead className="text-xs">Location</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Created At</TableHead>
+                  <TableHead className="text-xs">BHW User</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredComplaints.map((c) => (
                   <TableRow key={c.complaint_id}>
-                    <TableCell className="text-sm">{c.date_submitted}</TableCell>
+                    <TableCell className="text-sm">{c.complaint_id}</TableCell>
                     <TableCell className="text-sm">{c.complaint_type}</TableCell>
-                    <TableCell className="text-sm">{c.barangay}</TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
+                    <TableCell className="text-sm">{c.location || c.barangay}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={c.status} />
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {c.created_at || c.date_submitted}
+                    </TableCell>
+                    <TableCell className="text-sm">{c.bhw_user_id || "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

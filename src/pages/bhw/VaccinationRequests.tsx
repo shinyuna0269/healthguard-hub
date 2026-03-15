@@ -216,7 +216,7 @@ const BhwVaccinationRequests = () => {
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-heading flex items-center gap-2">
-            <Syringe className="h-4 w-4 text-primary" /> Vaccination Schedule (Recent)
+            <Syringe className="h-4 w-4 text-primary" /> All Vaccination Schedule
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -285,28 +285,26 @@ const BhwVaccinationRequests = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Patient Name</TableHead>
-                  <TableHead className="text-xs hidden md:table-cell">
-                    Patient Type
-                  </TableHead>
-                  <TableHead className="text-xs">Vaccine</TableHead>
+                  <TableHead className="text-xs">Citizen Name</TableHead>
+                  <TableHead className="text-xs">Vaccine Type</TableHead>
+                  <TableHead className="text-xs">Schedule Date</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">BHW User</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVaccinations.map((v: any) => (
                   <TableRow key={v.id}>
-                    <TableCell className="text-sm">{v.vaccination_date}</TableCell>
                     <TableCell className="text-sm">
                       {v.patient_name || v.child_name || "—"}
                     </TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">
-                      {v.patient_type || "—"}
-                    </TableCell>
                     <TableCell className="text-sm">{v.vaccine}</TableCell>
+                    <TableCell className="text-sm">{v.vaccination_date}</TableCell>
                     <TableCell>
                       <StatusBadge status={v.status} />
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {v.bhw_user_id || v.recorded_by || "—"}
                     </TableCell>
                   </TableRow>
                 ))}

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
@@ -41,6 +41,8 @@ import SystemAdminPlaceholder from "@/pages/sys/SystemAdminPlaceholder";
 import SettingsPage from "@/pages/SettingsPage";
 import LoginPage from "@/pages/LoginPage";
 import NotFound from "@/pages/NotFound";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Citizen pages
 import CitizenQR from "@/pages/citizen/CitizenQR";
@@ -88,18 +90,36 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
+  // If already authenticated, hand off to role-based router instead
   if (user) {
-    return <Navigate to="/" replace />;
+    return <RoleDashboard />;
   }
 
   return <>{children}</>;
 };
 
+const mapProfileRoleToPath = (role: string | null | undefined) => {
+  switch (role) {
+    case "citizen":
+      return "/citizen/dashboard";
+    case "bhw":
+      return "/bhw/dashboard";
+    case "sanitary_inspector":
+      return "/inspector/dashboard";
+    case "health_staff":
+      return "/staff/dashboard";
+    case "lgu_admin":
+      return "/lgu/dashboard";
+    case "city_health_officer":
+      return "/health-officer/dashboard";
+    case "system_admin":
+      return "/admin/dashboard";
+    default:
+      return null;
+  }
+};
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-
-const getDashboardPath = (role) => {
+const getDashboardPath = (role: string | null | undefined) => {
   switch (role) {
     case "Citizen_User":
     case "BusinessOwner_User":
@@ -113,34 +133,113 @@ const getDashboardPath = (role) => {
     case "Captain_User":
       return "/staff/city-health-officer-dashboard";
     case "LGUAdmin_User":
-      return "/admin/dashboard";
+      return "/lgu/dashboard";
     case "SysAdmin_User":
-      return "/sys/dashboard";
+      return "/admin/dashboard";
     default:
-      return "/dashboard";
+      return "/citizen/dashboard";
   }
 };
 
 const RoleDashboard = () => {
-  const { user, loading, authRealm, currentRole } = useAuth();
+  const { user, loading, currentRole, authRealm } = useAuth();
   const navigate = useNavigate();
+  const [profileRole, setProfileRole] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
-    // Avoid redirecting while auth is still resolving, or before
-    // a staff user's role has been fetched from the HSM database.
-    if (loading || !user) return;
+    if (!user || loading) return;
 
-    if (authRealm === "hsm" && currentRole === "Citizen_User") {
-      // For staff/BHW users signed in via HSM, wait until get_user_role
-      // has resolved and updated currentRole away from the default.
+    // Citizen users never need HSM profile roles
+    if (authRealm === "citizen") {
+      setProfileRole("citizen");
       return;
     }
 
-    const path = getDashboardPath(currentRole);
-    navigate(path, { replace: true });
-  }, [authRealm, currentRole, loading, navigate, user]);
+    let cancelled = false;
+    const fetchRole = async () => {
+      setRoleLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (error) {
+          setProfileRole(null);
+          return;
+        }
+
+        setProfileRole((data as { role?: string } | null)?.role ?? null);
+      } finally {
+        if (!cancelled) {
+          setRoleLoading(false);
+        }
+      }
+    };
+
+    fetchRole();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authRealm, user, loading]);
+
+  useEffect(() => {
+    if (loading || !user || roleLoading) return;
+
+    const pathFromProfile = mapProfileRoleToPath(profileRole);
+    const targetPath = pathFromProfile ?? getDashboardPath(currentRole);
+    navigate(targetPath, { replace: true });
+  }, [currentRole, loading, navigate, profileRole, roleLoading, user]);
+
+  if (loading || roleLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading dashboard...
+      </div>
+    );
+  }
 
   return null;
+};
+
+const CitizenRoute = ({ children }: { children: React.ReactNode }) => {
+  const { authRealm, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  if (authRealm !== "citizen") {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+const StaffRoute = ({ children }: { children: React.ReactNode }) => {
+  const { authRealm, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  if (authRealm !== "hsm") {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const App = () => (
@@ -156,13 +255,62 @@ const App = () => (
               {/* Root: always redirect to correct dashboard */}
               <Route path="/" element={<RoleDashboard />} />
               {/* Role-based dashboards */}
-              <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
-              <Route path="/bhw/dashboard" element={<BhwDashboard />} />
-              <Route path="/staff/dashboard" element={<HealthCenterDashboard />} />
-              <Route path="/staff/inspector-dashboard" element={<InspectorDashboard />} />
-              <Route path="/staff/city-health-officer-dashboard" element={<CityHealthOfficerDashboard />} />
-              <Route path="/admin/dashboard" element={<LguAdminDashboard />} />
-              <Route path="/sys/dashboard" element={<SystemAdminDashboard />} />
+              <Route
+                path="/citizen/dashboard"
+                element={
+                  <CitizenRoute>
+                    <CitizenDashboard />
+                  </CitizenRoute>
+                }
+              />
+              <Route
+                path="/bhw/dashboard"
+                element={
+                  <StaffRoute>
+                    <BhwDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/dashboard"
+                element={
+                  <StaffRoute>
+                    <HealthCenterDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/inspector-dashboard"
+                element={
+                  <StaffRoute>
+                    <InspectorDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/city-health-officer-dashboard"
+                element={
+                  <StaffRoute>
+                    <CityHealthOfficerDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <StaffRoute>
+                    <LguAdminDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/sys/dashboard"
+                element={
+                  <StaffRoute>
+                    <SystemAdminDashboard />
+                  </StaffRoute>
+                }
+              />
               {/* Core module routes */}
               <Route path="/health-center" element={<HealthCenterServices />} />
               <Route path="/sanitation-permit" element={<SanitationPermit />} />
@@ -171,28 +319,161 @@ const App = () => (
               <Route path="/surveillance" element={<HealthSurveillance />} />
               <Route path="/surveillance/map" element={<DiseaseMapDashboard />} />
               {/* Health Center Staff routes */}
-              <Route path="/staff/scan-qr" element={<StaffScanQr />} />
-              <Route path="/staff/requests" element={<StaffRequests />} />
-              <Route path="/staff/assessments" element={<StaffAssessments />} />
-              <Route path="/staff/permit-verification" element={<StaffPermitVerification />} />
-              <Route path="/staff/citizen-registration" element={<StaffCitizenRegistration />} />
+              <Route
+                path="/staff/scan-qr"
+                element={
+                  <StaffRoute>
+                    <StaffScanQr />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/requests"
+                element={
+                  <StaffRoute>
+                    <StaffRequests />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/assessments"
+                element={
+                  <StaffRoute>
+                    <StaffAssessments />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/permit-verification"
+                element={
+                  <StaffRoute>
+                    <StaffPermitVerification />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/citizen-registration"
+                element={
+                  <StaffRoute>
+                    <StaffCitizenRegistration />
+                  </StaffRoute>
+                }
+              />
               {/* BHW routes */}
-              <Route path="/citizen-service-assistance" element={<CitizenAssistance />} />
+              <Route
+                path="/citizen-service-assistance"
+                element={
+                  <StaffRoute>
+                    <CitizenAssistance />
+                  </StaffRoute>
+                }
+              />
               {/* Backward compatibility for older links */}
-              <Route path="/bhw/citizen-assistance" element={<CitizenAssistance />} />
-              <Route path="/assisted-requests" element={<BhwServiceRequests />} />
-              <Route path="/bhw/requests" element={<BhwServiceRequests />} />
-              <Route path="/health-programs/vaccination-requests" element={<BhwVaccinationRequests />} />
-              <Route path="/health-programs/nutrition-monitoring" element={<BhwNutritionMonitoring />} />
-              <Route path="/bhw/health-programs" element={<BhwHealthPrograms />} />
-              <Route path="/bhw/community-reports" element={<BhwCommunityReports />} />
-              <Route path="/bhw/complaints" element={<BhwComplaints />} />
-              <Route path="/bhw/barangay-health" element={<BhwBarangayHealth />} />
+              <Route
+                path="/bhw/citizen-assistance"
+                element={
+                  <StaffRoute>
+                    <CitizenAssistance />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/assisted-requests"
+                element={
+                  <StaffRoute>
+                    <BhwServiceRequests />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/bhw/requests"
+                element={
+                  <StaffRoute>
+                    <BhwServiceRequests />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/health-programs/vaccination-requests"
+                element={
+                  <StaffRoute>
+                    <BhwVaccinationRequests />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/health-programs/nutrition-monitoring"
+                element={
+                  <StaffRoute>
+                    <BhwNutritionMonitoring />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/bhw/health-programs"
+                element={
+                  <StaffRoute>
+                    <BhwHealthPrograms />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/bhw/community-reports"
+                element={
+                  <StaffRoute>
+                    <BhwCommunityReports />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/bhw/complaints"
+                element={
+                  <StaffRoute>
+                    <BhwComplaints />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/bhw/barangay-health"
+                element={
+                  <StaffRoute>
+                    <BhwBarangayHealth />
+                  </StaffRoute>
+                }
+              />
               {/* LGU Admin routes */}
-              <Route path="/lgu/requests" element={<LguRequests />} />
-              <Route path="/lgu/vaccination" element={<LguVaccination />} />
-              <Route path="/lgu/sanitation" element={<LguSanitation />} />
-              <Route path="/lgu/analytics" element={<LguAnalytics />} />
+              <Route
+                path="/lgu/requests"
+                element={
+                  <StaffRoute>
+                    <LguRequests />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/lgu/vaccination"
+                element={
+                  <StaffRoute>
+                    <LguVaccination />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/lgu/sanitation"
+                element={
+                  <StaffRoute>
+                    <LguSanitation />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/lgu/analytics"
+                element={
+                  <StaffRoute>
+                    <LguAnalytics />
+                  </StaffRoute>
+                }
+              />
               {/* System Admin routes */}
               <Route path="/sys/users" element={<SystemAdminUsers />} />
               <Route path="/sys/logs" element={<SystemAdminPlaceholder title="System Logs" />} />

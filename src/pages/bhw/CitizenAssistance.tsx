@@ -8,12 +8,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { ScanLine, Search } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { QrScanner } from "@yudiel/react-qr-scanner";
+import QrScanner from "react-qr-scanner";
 
 const CitizenAssistance = () => {
   const { user } = useAuth();
   const [scannedId, setScannedId] = useState("");
   const [manualId, setManualId] = useState("");
+  const [scannerError, setScannerError] = useState<string | null>(null);
 
   const citizenId = scannedId || manualId;
 
@@ -22,50 +23,70 @@ const CitizenAssistance = () => {
     return citizenId.replace("GSMS-2026-", "").toLowerCase();
   }, [citizenId]);
 
-  const { data: profile } = useQuery({
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    error: profileError,
+  } = useQuery<any | null>({
     queryKey: ["bhw_citizen_profile", userPrefix],
     queryFn: async () => {
       if (!userPrefix) return null;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("profiles")
-        .select("user_id, full_name, email, gender, birthdate, barangay")
+        .select("user_id, full_name, email")
         .ilike("user_id", `${userPrefix}%`)
         .limit(1)
         .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!userPrefix,
   });
 
-  const citizenUserId = profile?.user_id as string | undefined;
+  const citizenUserId = (profile as any)?.user_id as string | undefined;
 
-  const { data: vaccinations = [] } = useQuery({
+  const {
+    data: vaccinations = [],
+    isLoading: vaccinationsLoading,
+    error: vaccinationsError,
+  } = useQuery({
     queryKey: ["bhw_citizen_vaccinations", citizenUserId],
     queryFn: async () => {
       if (!citizenUserId) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("vaccinations")
         .select("*")
         .order("vaccination_date", { ascending: false })
         .limit(5);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!citizenUserId,
   });
 
-  const { data: nutrition = [] } = useQuery({
+  const {
+    data: nutrition = [],
+    isLoading: nutritionLoading,
+    error: nutritionError,
+  } = useQuery<any[]>({
     queryKey: ["bhw_citizen_nutrition", citizenUserId],
     queryFn: async () => {
       if (!citizenUserId) return [];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("nutrition_records")
         .select("*")
         .order("monitoring_date", { ascending: false })
         .limit(5);
+      if (error) throw error;
       return data || [];
     },
     enabled: !!citizenUserId,
   });
+
+  const isLoading =
+    profileLoading || vaccinationsLoading || nutritionLoading;
+  const hasError =
+    !!profileError || !!vaccinationsError || !!nutritionError || !!scannerError;
 
   return (
     <div className="space-y-6">
@@ -89,21 +110,32 @@ const CitizenAssistance = () => {
             <div className="space-y-2">
               <Label className="text-xs">Scan QR using camera</Label>
               <div className="rounded-md border bg-muted/40 overflow-hidden">
-                <QrReader
-                  constraints={{ facingMode: "environment" }}
-                  onResult={(result) => {
-                    if (result?.getText) {
-                      const value = result.getText();
-                      if (value && value !== scannedId) {
-                        setScannedId(value);
-                      }
+                <QrScanner
+                  onScan={(result) => {
+                    const value = Array.isArray(result)
+                      ? result[0]?.text
+                      : (result as any)?.text;
+                    if (value && value !== scannedId) {
+                      setScannedId(value);
+                      setScannerError(null);
                     }
                   }}
-                  scanDelay={400}
-                  containerStyle={{ width: "100%" }}
-                  videoContainerStyle={{ width: "100%" }}
+                  onError={(error) => {
+                    setScannerError(
+                      error instanceof Error
+                        ? error.message
+                        : "Unable to access camera for QR scanning.",
+                    );
+                  }}
+                  constraints={{ video: { facingMode: "environment" } }}
+                  style={{ width: "100%" }}
                 />
               </div>
+              {scannerError && (
+                <p className="text-[11px] text-destructive mt-1">
+                  {scannerError}
+                </p>
+              )}
             </div>
             <div className="space-y-2 pt-2">
               <Label className="text-xs">Or manually enter QR Citizen ID</Label>
@@ -131,11 +163,22 @@ const CitizenAssistance = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {!profile ? (
+            {isLoading && (
+              <p className="text-sm text-muted-foreground">
+                Loading citizen profile and recent records...
+              </p>
+            )}
+            {hasError && !isLoading && (
+              <p className="text-sm text-destructive">
+                Unable to load citizen profile or records. Please check the QR code and try again.
+              </p>
+            )}
+            {!isLoading && !hasError && !profile && (
               <p className="text-sm text-muted-foreground">
                 Enter a QR Citizen ID to retrieve a basic citizen profile for assistance.
               </p>
-            ) : (
+            )}
+            {!isLoading && !hasError && profile && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">Basic Information</p>
                 <div className="grid grid-cols-2 gap-2 text-sm">
@@ -153,17 +196,7 @@ const CitizenAssistance = () => {
                   </div>
                   <div>
                     <p className="text-[11px] text-muted-foreground">Barangay</p>
-                    <p className="text-xs truncate">{profile.barangay || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground">Gender</p>
-                    <p className="text-xs truncate">{profile.gender || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground">Birthdate</p>
-                    <p className="text-xs truncate">
-                      {profile.birthdate ? new Date(profile.birthdate).toLocaleDateString() : "—"}
-                    </p>
+                    <p className="text-xs truncate">—</p>
                   </div>
                 </div>
                 <div className="pt-3 space-y-2">
@@ -192,11 +225,11 @@ const CitizenAssistance = () => {
                         <p className="text-xs text-muted-foreground">No nutrition records found.</p>
                       ) : (
                         <ul className="space-y-1">
-                          {nutrition.map((n) => (
+                      {nutrition.map((n: any) => (
                             <li key={n.id} className="text-xs flex justify-between gap-2">
                               <span className="truncate">{n.child_name || "Child"}</span>
                               <span className="text-[10px] text-muted-foreground">
-                                {n.nutritional_status || "—"}
+                                {n.nutritional_status || n.status || "—"}
                               </span>
                             </li>
                           ))}

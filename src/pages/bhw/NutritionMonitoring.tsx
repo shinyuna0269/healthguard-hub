@@ -284,17 +284,12 @@ const BhwNutritionMonitoring = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Child</TableHead>
+                  <TableHead className="text-xs">Child Name</TableHead>
                   <TableHead className="text-xs">Age</TableHead>
-                  <TableHead className="text-xs hidden md:table-cell">
-                    Barangay
-                  </TableHead>
-                  <TableHead className="text-xs">Weight (kg)</TableHead>
-                  <TableHead className="text-xs">Height (cm)</TableHead>
-                  <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs hidden md:table-cell">
-                    Date
-                  </TableHead>
+                  <TableHead className="text-xs">Height</TableHead>
+                  <TableHead className="text-xs">Weight</TableHead>
+                  <TableHead className="text-xs">Nutrition Status</TableHead>
+                  <TableHead className="text-xs">Monitoring Date</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -302,19 +297,16 @@ const BhwNutritionMonitoring = () => {
                   <TableRow key={n.id}>
                     <TableCell className="text-sm">{n.child_name}</TableCell>
                     <TableCell className="text-sm">{n.age || "—"}</TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">
-                      {n.barangay || "—"}
+                    <TableCell className="text-sm">
+                      {n.height_cm ?? n.height ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {n.weight_kg ?? n.weight ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {n.height_cm ?? n.height ?? "—"}
+                      {n.nutritional_status || n.status || "—"}
                     </TableCell>
-                    <TableCell>
-                      <StatusBadge status={n.nutritional_status || n.status} />
-                    </TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">
+                    <TableCell className="text-sm">
                       {n.monitoring_date || n.created_at}
                     </TableCell>
                   </TableRow>

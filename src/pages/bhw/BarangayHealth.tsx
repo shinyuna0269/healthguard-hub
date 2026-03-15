@@ -19,7 +19,11 @@ const BhwBarangayHealth = () => {
   const { data: cases = [] } = useQuery({
     queryKey: ["bhw_health_cases"],
     queryFn: async () => {
-      const { data } = await supabase.from("surveillance_cases").select("*").limit(200);
+      const { data, error } = await supabase
+        .from("surveillance_cases")
+        .select("*")
+        .limit(200);
+      if (error) throw error;
       return data || [];
     },
   });
@@ -27,7 +31,11 @@ const BhwBarangayHealth = () => {
   const { data: vaccinations = [] } = useQuery({
     queryKey: ["bhw_health_vaccinations"],
     queryFn: async () => {
-      const { data } = await supabase.from("vaccinations").select("*").limit(200);
+      const { data, error } = await supabase
+        .from("vaccinations")
+        .select("*")
+        .limit(200);
+      if (error) throw error;
       return data || [];
     },
   });
@@ -35,7 +43,11 @@ const BhwBarangayHealth = () => {
   const { data: nutrition = [] } = useQuery({
     queryKey: ["bhw_health_nutrition"],
     queryFn: async () => {
-      const { data } = await supabase.from("nutrition_records").select("*").limit(200);
+      const { data, error } = await supabase
+        .from("nutrition_records")
+        .select("*")
+        .limit(200);
+      if (error) throw error;
       return data || [];
     },
   });
@@ -43,8 +55,58 @@ const BhwBarangayHealth = () => {
   const { data: requests = [] } = useQuery({
     queryKey: ["bhw_health_requests"],
     queryFn: async () => {
-      const { data } = await supabase.from("service_requests").select("id, status").limit(200);
+      const { data, error } = await supabase
+        .from("service_requests")
+        .select("id, status")
+        .limit(200);
+      if (error) throw error;
       return data || [];
+    },
+  });
+
+  const { data: activeCasesCount = 0 } = useQuery({
+    queryKey: ["bhw_health_cases_count_active"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("surveillance_cases")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "active");
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  const { data: vaccinationsCount = 0 } = useQuery({
+    queryKey: ["bhw_health_vaccinations_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("vaccinations")
+        .select("*", { count: "exact", head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  const { data: nutritionCount = 0 } = useQuery({
+    queryKey: ["bhw_health_nutrition_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("nutrition_records")
+        .select("*", { count: "exact", head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
+  const { data: activeRequestsCount = 0 } = useQuery({
+    queryKey: ["bhw_health_requests_count_active"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("service_requests")
+        .select("*", { count: "exact", head: true })
+        .not("status", "eq", "Completed");
+      if (error) throw error;
+      return count || 0;
     },
   });
 
@@ -63,8 +125,8 @@ const BhwBarangayHealth = () => {
   }, {});
   const vacChartData = Object.entries(vacByStatus).map(([name, value]) => ({ name, value }));
 
-  const activeCases = cases.filter((c) => c.status === "active").length;
-  const activeRequests = requests.filter((r) => r.status !== "Completed").length;
+  const activeCases = activeCasesCount;
+  const activeRequests = activeRequestsCount;
 
   return (
     <div className="space-y-6">
@@ -91,7 +153,7 @@ const BhwBarangayHealth = () => {
               <Syringe className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Vaccination Records</p>
-                <p className="text-lg font-bold">{vaccinations.length}</p>
+                <p className="text-lg font-bold">{vaccinationsCount}</p>
               </div>
             </div>
           </CardContent>
@@ -102,7 +164,7 @@ const BhwBarangayHealth = () => {
               <HeartPulse className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Nutrition Records</p>
-                <p className="text-lg font-bold">{nutrition.length}</p>
+                <p className="text-lg font-bold">{nutritionCount}</p>
               </div>
             </div>
           </CardContent>
