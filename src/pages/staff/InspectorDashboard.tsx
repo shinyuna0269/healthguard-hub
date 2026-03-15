@@ -19,7 +19,7 @@ const InspectorDashboard = () => {
   const { data: complaints = [] } = useQuery({
     queryKey: ["inspector_sanitation_complaints"],
     queryFn: async () => {
-      const { data } = await supabase.from("sanitation_complaints").select("complaint_id, status").limit(200);
+      const { data } = await (supabase as any).from("sanitation_complaints").select("complaint_id, status").limit(200);
       return data || [];
     },
   });

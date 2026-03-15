@@ -15,7 +15,7 @@ const DesludgingScheduleViewer = () => {
   const { data: schedules = [], isLoading } = useQuery({
     queryKey: ["desludging_schedules"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("desludging_schedules")
         .select("*")
         .order("schedule_date", { ascending: true })

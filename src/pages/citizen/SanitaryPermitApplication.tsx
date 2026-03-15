@@ -168,7 +168,7 @@ const SanitaryPermitApplication = () => {
       const path = `${user!.id}/sanitary_apps/${app.id}/reinspection_proof.${reinspectionFile.name.split(".").pop() || "pdf"}`;
       const { error: upErr } = await supabase.storage.from("documents").upload(path, reinspectionFile, { upsert: true });
       if (upErr) throw upErr;
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: "reinspection_requested",

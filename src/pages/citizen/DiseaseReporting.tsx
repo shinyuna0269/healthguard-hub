@@ -36,7 +36,7 @@ const DiseaseReporting = () => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from("disease_reports").insert({
+      const { data, error } = await (supabase as any).from("disease_reports").insert({
         disease: form.disease,
         patient_location: form.location,
         details: form.details,

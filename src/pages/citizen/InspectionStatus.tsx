@@ -34,7 +34,7 @@ const InspectionStatus = () => {
     queryKey: ["citizen_sanitary_inspections", appIds],
     queryFn: async () => {
       if (appIds.length === 0) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("sanitary_inspections")
         .select("*")
         .in("application_id", appIds)
