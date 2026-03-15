@@ -154,7 +154,7 @@ const SanitationPermit = () => {
     mutationFn: async ({ app, result, correctionNotes }: { app: any; result: string; correctionNotes: string }) => {
       const insp = inspectionsList.find((i) => i.application_id === app.id && i.status === "scheduled");
       if (insp) {
-        await supabase
+        await (supabase as any)
           .from("sanitary_inspections")
           .update({
             status: "completed",
@@ -167,7 +167,7 @@ const SanitationPermit = () => {
           .eq("id", insp.id);
       }
       const newStatus = result === "passed" ? "permit_approved" : result === "correction_required" ? "correction_required" : "correction_required";
-      await supabase
+      await (supabase as any)
         .from("sanitary_permit_applications")
         .update({
           status: newStatus,
