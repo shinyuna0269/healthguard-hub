@@ -89,7 +89,7 @@ const SanitaryPermitApplication = () => {
       const appId = safeRandomId("").slice(0, 8).toUpperCase();
       const orderNum = `OP-QC-${new Date().getFullYear()}-${appId}`;
 
-      const { data: app, error: appErr } = await supabase
+      const { data: app, error: appErr } = await (supabase as any)
         .from("sanitary_permit_applications")
         .insert({
           establishment_id: selectedEstablishment.id,
