@@ -1,7 +1,7 @@
 import { useAuth, ROLE_LABELS } from "@/contexts/AuthContext";
 import { Bell, Search, Moon, Sun } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 const THEME_STORAGE_KEY = "healthguard-theme";
 
 const TopBar = () => {
+  const navigate = useNavigate();
   const { currentRole, userName, signOut } = useAuth();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -110,11 +111,16 @@ const TopBar = () => {
               <div className="font-medium truncate">{userName || ROLE_LABELS[currentRole]}</div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => (window.location.href = "/settings")}>
-              Settings
+            <DropdownMenuItem asChild>
+              <Link to="/settings">Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
+            <DropdownMenuItem
+              onClick={() => {
+                signOut();
+                navigate("/login");
+              }}
+            >
               Logout
             </DropdownMenuItem>
           </DropdownMenuContent>

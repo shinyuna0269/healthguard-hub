@@ -10,15 +10,15 @@ export interface DateInputWithCalendarProps extends Omit<React.InputHTMLAttribut
 const DateInputWithCalendar = React.forwardRef<HTMLInputElement, DateInputWithCalendarProps>(
   ({ className, ...props }, ref) => (
     <div className={cn("relative flex items-center", className)}>
+      <Calendar
+        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none shrink-0"
+        aria-hidden
+      />
       <Input
         type="date"
         ref={ref}
-        className="pr-10 h-9 w-full"
+        className="pl-10 h-9 w-full"
         {...props}
-      />
-      <Calendar
-        className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none shrink-0"
-        aria-hidden
       />
     </div>
   )

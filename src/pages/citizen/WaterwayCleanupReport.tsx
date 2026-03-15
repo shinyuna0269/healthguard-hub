@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Waves, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { safeRandomId } from "@/lib/safeId";
 
 const REPORT_TYPES = ["Polluted waterway", "Clogged drainage", "Garbage dumping in rivers"];
 
@@ -66,7 +67,7 @@ const WaterwayCleanupReport = () => {
     mutationFn: async () => {
       let photo_url: string | null = null;
       if (photoFile && user) {
-        const path = `${user.id}/waterway/${crypto.randomUUID().slice(0, 8)}.${photoFile.name.split(".").pop() || "jpg"}`;
+        const path = `${user.id}/waterway/${safeRandomId("").slice(0, 8)}.${photoFile.name.split(".").pop() || "jpg"}`;
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_url = path;
       }

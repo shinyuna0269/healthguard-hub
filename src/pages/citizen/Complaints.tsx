@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { QC_BARANGAYS, COMPLAINT_TYPES } from "@/lib/constants";
 import { MessageSquare, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { safeRandomId } from "@/lib/safeId";
 
 const Complaints = () => {
   const { user } = useAuth();
@@ -70,7 +71,7 @@ const Complaints = () => {
     mutationFn: async () => {
       let photo_attachment: string | null = null;
       if (photoFile && user) {
-        const path = `${user.id}/complaints/${crypto.randomUUID().slice(0, 8)}.${photoFile.name.split(".").pop() || "jpg"}`;
+        const path = `${user.id}/complaints/${safeRandomId("").slice(0, 8)}.${photoFile.name.split(".").pop() || "jpg"}`;
         const { error: upErr } = await supabase.storage.from("documents").upload(path, photoFile, { upsert: true });
         if (!upErr) photo_attachment = path;
       }

@@ -6,21 +6,63 @@ import { Button } from "@/components/ui/button";
 import { Download, Printer, User, Hash, Calendar, Droplet, Users, MapPin, Phone, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { citizenSupabase } from "@/lib/citizenSupabase";
+import type { CitizenProfile } from "@/contexts/AuthContext";
 
 const formatDate = (d: string | null | undefined) => {
   if (!d) return "—";
   try {
-    const date = new Date(d + "T12:00:00");
+    const date = d.includes("T") ? new Date(d) : new Date(d + "T12:00:00");
     return date.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   } catch {
     return d;
   }
 };
 
+function normalizeCitizenRow(data: Record<string, unknown> | null): CitizenProfile | null {
+  if (!data) return null;
+  const first = (data.first_name as string) ?? "";
+  const last = (data.last_name as string) ?? "";
+  const full = (data.full_name as string) ?? "";
+  const [f, l] = first || last ? [first, last] : full ? [full.trim().split(/\s+/)[0] ?? "", full.trim().split(/\s+/).slice(1).join(" ") ?? ""] : ["", ""];
+  const birth =
+    (data.birthdate as string | null) ??
+    (data.birth_date as string | null) ??
+    (data.birthday as string | null) ??
+    (data.date_of_birth as string | null) ??
+    null;
+  const contact = (data.contact_number as string | null) ?? (data.phone as string | null) ?? null;
+  return {
+    first_name: f,
+    last_name: l,
+    contact_number: contact,
+    address: (data.address as string | null) ?? null,
+    barangay: (data.barangay as string | null) ?? null,
+    birthdate: birth,
+    gender: (data.gender as string | null) ?? null,
+    blood_type: (data.blood_type as string | null) ?? null,
+  };
+}
+
 const CitizenQR = () => {
   const { user, userName, authRealm, citizenProfile } = useAuth();
   const citizenId = user?.id ? `CZN-${user.id.slice(0, 8).toUpperCase()}` : "—";
   const qrRef = useRef<HTMLDivElement>(null);
+
+  // When citizen: fetch profile from Citizen Information Supabase (fallback if context not populated)
+  const { data: citizenProfileFallback } = useQuery({
+    queryKey: ["citizen_profile_qr", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data: byUserId } = await citizenSupabase.from("profiles").select("*").eq("user_id", user.id).maybeSingle();
+      if (byUserId) return normalizeCitizenRow(byUserId as Record<string, unknown>);
+      const { data: byId } = await citizenSupabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+      return normalizeCitizenRow(byId as Record<string, unknown> | null);
+    },
+    enabled: !!user?.id && authRealm === "citizen",
+  });
+
+  const profile = authRealm === "citizen" ? (citizenProfile ?? citizenProfileFallback) : null;
 
   // When logged in as staff (HSM), fallback to HSM profiles if needed (e.g. demo)
   const { data: hsmProfile } = useQuery({
@@ -38,18 +80,20 @@ const CitizenQR = () => {
 
   const isCitizenRealm = authRealm === "citizen";
 
-  const fullName = isCitizenRealm && citizenProfile
-    ? [citizenProfile.first_name, citizenProfile.last_name].filter(Boolean).join(" ") || userName || "—"
+  const fullName = isCitizenRealm && profile
+    ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || userName || "—"
     : hsmProfile?.full_name || userName || "—";
   const email = (isCitizenRealm ? user?.email : hsmProfile?.email) || user?.email || "—";
-  const dateOfBirth = isCitizenRealm && citizenProfile
-    ? formatDate(citizenProfile.birthdate)
+  const dateOfBirth = isCitizenRealm && profile
+    ? formatDate((profile as any).birthdate)
     : formatDate(hsmProfile?.date_of_birth);
-  const bloodType = isCitizenRealm ? "—" : (hsmProfile?.blood_type ?? "—");
-  const gender = isCitizenRealm ? "—" : (hsmProfile?.gender ?? "—");
-  const address = isCitizenRealm && citizenProfile ? (citizenProfile.address ?? "—") : (hsmProfile?.address ?? "—");
-  const contactNumber = isCitizenRealm && citizenProfile
-    ? (citizenProfile.contact_number ?? "—")
+  const gender = isCitizenRealm ? ((profile as any).gender ?? "—") : (hsmProfile?.gender ?? "—");
+  const address = isCitizenRealm && profile ? ((profile as any).address ?? "—") : (hsmProfile?.address ?? "—");
+  const barangay = isCitizenRealm && profile ? ((profile as any).barangay ?? "—") : "—";
+  const cityMunicipality = isCitizenRealm && profile ? ((profile as any).city_municipality ?? "—") : "—";
+  const zipCode = isCitizenRealm && profile ? ((profile as any).zip_code ?? "—") : "—";
+  const contactNumber = isCitizenRealm && profile
+    ? ((profile as any).contact_number ?? "—")
     : (hsmProfile?.contact_number ?? "—");
 
   const handleDownload = useCallback(() => {
@@ -101,9 +145,10 @@ const CitizenQR = () => {
 
   const handlePrint = useCallback(() => {
     const svgEl = qrRef.current?.querySelector("svg");
-    const qrMarkup = svgEl ? svgEl.outerHTML : "";
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=800,height=600");
+    const qrMarkup = svgEl ? svgEl.outerHTML : qrRef.current?.innerHTML || "";
+    const printWindow = window.open("about:blank", "_blank", "noopener,noreferrer,width=800,height=600");
     if (!printWindow) return;
+    printWindow.document.open();
     printWindow.document.write(`
       <html>
         <head>
@@ -140,9 +185,11 @@ const CitizenQR = () => {
               <div class="info-row"><div class="info-label">Full Name</div><div class="info-value">${fullName}</div></div>
               <div class="info-row"><div class="info-label">Citizen ID</div><div class="info-value">${citizenId}</div></div>
               <div class="info-row"><div class="info-label">Date of Birth</div><div class="info-value">${dateOfBirth}</div></div>
-              <div class="info-row"><div class="info-label">Blood Type</div><div class="info-value">${bloodType}</div></div>
               <div class="info-row"><div class="info-label">Gender</div><div class="info-value">${gender}</div></div>
               <div class="info-row"><div class="info-label">Registered Address</div><div class="info-value">${address}</div></div>
+              <div class="info-row"><div class="info-label">Barangay</div><div class="info-value">${barangay}</div></div>
+              <div class="info-row"><div class="info-label">City / Municipality</div><div class="info-value">${cityMunicipality}</div></div>
+              <div class="info-row"><div class="info-label">ZIP Code</div><div class="info-value">${zipCode}</div></div>
               <div class="info-row"><div class="info-label">Contact Number</div><div class="info-value">${contactNumber}</div></div>
               <div class="info-row"><div class="info-label">Email Address</div><div class="info-value">${email}</div></div>
             </div>
@@ -151,24 +198,24 @@ const CitizenQR = () => {
       </html>
     `);
     printWindow.document.close();
-    setTimeout(() => { printWindow.focus(); printWindow.print(); }, 300);
-  }, [citizenId, fullName, dateOfBirth, bloodType, gender, address, contactNumber, email]);
+    const doPrint = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch {
+        // ignore
+      }
+    };
+    setTimeout(doPrint, 300);
+  }, [citizenId, fullName, dateOfBirth, gender, address, barangay, cityMunicipality, zipCode, contactNumber, email]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-heading">My QR Citizen ID</h1>
-        <p className="text-sm text-muted-foreground">
-          Your digital citizen identification card for health and sanitation services.
-          {isCitizenRealm && (
-            <span className="block mt-0.5 text-xs text-muted-foreground/80">
-              Profile data is loaded from the Citizen Information system.
-            </span>
-          )}
-        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto">
         <Card className="glass-card">
           <CardHeader className="text-center pb-2">
             <CardTitle className="text-sm font-heading">QR Citizen ID</CardTitle>
@@ -222,13 +269,6 @@ const CitizenQR = () => {
               </div>
             </div>
             <div className="flex gap-3">
-              <Droplet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Blood Type</p>
-                <p className="text-sm mt-0.5">{bloodType}</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
               <Users className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Gender</p>
@@ -240,6 +280,27 @@ const CitizenQR = () => {
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider">Registered Address</p>
                 <p className="text-sm mt-0.5 break-words">{address}</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Barangay</p>
+                <p className="text-sm mt-0.5 break-words">{barangay}</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">City / Municipality</p>
+                <p className="text-sm mt-0.5 break-words">{cityMunicipality}</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <Hash className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">ZIP Code</p>
+                <p className="text-sm mt-0.5 break-words">{zipCode}</p>
               </div>
             </div>
             <div className="flex gap-3">

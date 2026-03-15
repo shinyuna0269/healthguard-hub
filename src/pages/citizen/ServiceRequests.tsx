@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { safeRandomId } from "@/lib/safeId";
 
 const SERVICE_REQUEST_TYPES = [
   "Septic Tank Desludging",
@@ -83,7 +84,7 @@ const ServiceRequests = () => {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const refNum = `SR-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+      const refNum = `SR-${new Date().getFullYear()}-${safeRandomId("").slice(0, 6).toUpperCase()}`;
       let supporting_documents_url: string | null = null;
       if (supportingFile && user) {
         const path = `${user.id}/service_requests/${refNum.replace(/[^a-zA-Z0-9-]/g, "_")}.${supportingFile.name.split(".").pop() || "pdf"}`;

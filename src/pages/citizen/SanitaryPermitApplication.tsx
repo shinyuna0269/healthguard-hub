@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { FileCheck, Plus, Upload, AlertTriangle, Download, Printer, Search } from "lucide-react";
 import { toast } from "sonner";
+import { safeRandomId } from "@/lib/safeId";
 
 const STATUS_LABELS: Record<string, string> = {
   application_submitted: "Application Submitted",
@@ -85,7 +86,7 @@ const SanitaryPermitApplication = () => {
   const addMutation = useMutation({
     mutationFn: async () => {
       if (!selectedEstablishment) throw new Error("Select an establishment");
-      const appId = crypto.randomUUID().slice(0, 8).toUpperCase();
+      const appId = safeRandomId("").slice(0, 8).toUpperCase();
       const orderNum = `OP-QC-${new Date().getFullYear()}-${appId}`;
 
       const { data: app, error: appErr } = await supabase
