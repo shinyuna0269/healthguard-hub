@@ -46,7 +46,7 @@ const BhwCommunityReports = () => {
 
   const reportMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("disease_reports").insert({
+      const { error } = await (supabase as any).from("disease_reports").insert({
         disease,
         patient_location: barangay,
         details: `Citizen ID: ${citizenId || "N/A"} — ${details}`,
