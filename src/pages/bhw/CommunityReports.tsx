@@ -35,7 +35,7 @@ const BhwCommunityReports = () => {
   const { data: reports = [] } = useQuery({
     queryKey: ["bhw_disease_reports"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("disease_reports")
         .select("*")
         .order("created_at", { ascending: false })
