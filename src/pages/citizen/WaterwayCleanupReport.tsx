@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Waves, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const REPORT_TYPES = ["Polluted waterway", "Clogged drainage", "Garbage dumping in rivers"];
 
@@ -19,6 +20,8 @@ const WaterwayCleanupReport = () => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [form, setForm] = useState({ report_type: "", location: "", description: "", barangay: "" });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -39,16 +42,25 @@ const WaterwayCleanupReport = () => {
   });
 
   const filtered = useMemo(() => {
+    let list = reports;
     const q = search.trim().toLowerCase();
-    if (!q) return reports;
-    return reports.filter(
-      (r) =>
-        (r.location || "").toLowerCase().includes(q) ||
-        (r.barangay || "").toLowerCase().includes(q) ||
-        (r.report_type || "").toLowerCase().includes(q) ||
-        (r.status || "").toLowerCase().includes(q)
-    );
-  }, [reports, search]);
+    if (q) {
+      list = list.filter(
+        (r) =>
+          (r.location || "").toLowerCase().includes(q) ||
+          (r.barangay || "").toLowerCase().includes(q) ||
+          (r.report_type || "").toLowerCase().includes(q) ||
+          (r.status || "").toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter && statusFilter !== "all") {
+      list = list.filter((r) => (r.status || "").toLowerCase() === statusFilter.toLowerCase());
+    }
+    if (dateFilter) {
+      list = list.filter((r) => (r.created_at || "").slice(0, 7) === dateFilter);
+    }
+    return list;
+  }, [reports, search, statusFilter, dateFilter]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -93,9 +105,23 @@ const WaterwayCleanupReport = () => {
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by location, barangay, type, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input placeholder="Search by location, barangay, type, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in-progress">In progress</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input type="month" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-[160px]" />
           </div>
         </CardHeader>
         <CardContent>

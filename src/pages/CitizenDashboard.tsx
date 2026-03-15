@@ -22,7 +22,7 @@ const CitizenDashboard = () => {
   });
 
   const { data: complaints = [] } = useQuery({
-    queryKey: ["citizen_sanitation_complaints_summary", user?.id],
+    queryKey: ["citizen_complaints", user?.id],
     queryFn: async () => {
       const { data } = await supabase.from("sanitation_complaints").select("complaint_id, status").eq("citizen_id", user!.id);
       return data || [];
@@ -49,7 +49,7 @@ const CitizenDashboard = () => {
 
   const row2: DashCard[] = [
     { title: "Service Requests", icon: FileText, subtitle: activeRequests > 0 ? `${activeRequests} active` : "No active requests", url: "/citizen/requests" },
-    { title: "Sanitation Complaints", icon: MessageSquare, subtitle: pendingComplaints > 0 ? `${pendingComplaints} pending` : "No pending", url: "/citizen/sanitation-complaints" },
+    { title: "Complaints", icon: MessageSquare, subtitle: pendingComplaints > 0 ? `${pendingComplaints} pending` : "No pending", url: "/citizen/complaints" },
     { title: "Disease Reports", icon: ShieldAlert, subtitle: "Report disease cases", url: "/citizen/disease-reporting" },
   ];
 

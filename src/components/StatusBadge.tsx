@@ -52,9 +52,14 @@ const statusMap: Record<
       "bg-green-700 text-emerald-50 border border-green-800 dark:bg-green-500 dark:text-slate-950 dark:border-green-600",
   },
   completed: {
-    variant: "outline",
+    variant: "default",
     className:
-      "bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700/40 dark:text-gray-100 dark:border-gray-500/60",
+      "bg-emerald-600 text-white border border-emerald-700 dark:bg-emerald-500 dark:text-slate-950 dark:border-emerald-600",
+  },
+  missed: {
+    variant: "destructive",
+    className:
+      "bg-red-100 text-red-800 border border-red-200 dark:bg-red-500/20 dark:text-red-100 dark:border-red-500/40",
   },
 
   // Existing generic statuses mapped to the closest equivalents
@@ -71,7 +76,7 @@ const statusMap: Record<
   pending: {
     variant: "secondary",
     className:
-      "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-100 dark:border-blue-500/40",
+      "bg-orange-100 text-orange-800 border border-orange-200 dark:bg-orange-500/20 dark:text-orange-100 dark:border-orange-500/40",
   },
   "in-progress": {
     variant: "secondary",
@@ -81,7 +86,7 @@ const statusMap: Record<
   scheduled: {
     variant: "secondary",
     className:
-      "bg-sky-100 text-sky-800 border border-sky-200 dark:bg-sky-500/20 dark:text-sky-100 dark:border-sky-500/40",
+      "bg-blue-100 text-blue-800 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-100 dark:border-blue-500/40",
   },
   rejected: {
     variant: "destructive",
@@ -146,11 +151,6 @@ const statusMap: Record<
     variant: "secondary",
     className:
       "bg-teal-100 text-teal-800 border border-teal-200 dark:bg-teal-500/20 dark:text-teal-100 dark:border-teal-500/40",
-  },
-  "inspection scheduled": {
-    variant: "secondary",
-    className:
-      "bg-violet-100 text-violet-800 border border-violet-200 dark:bg-violet-500/20 dark:text-violet-100 dark:border-violet-500/40",
   },
   "reinspection requested": {
     variant: "secondary",

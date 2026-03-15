@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { supabase as hsmSupabase } from "@/integrations/supabase/client";
+import { citizenSupabase } from "@/lib/citizenSupabase";
 import type { User, Session } from "@supabase/supabase-js";
 
 export type UserRole =
@@ -23,6 +24,16 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   SysAdmin_User: "System Administrator",
 };
 
+/** Citizen profile from Citizen Information subsystem (read-only, not stored in HSM). */
+export interface CitizenProfile {
+  first_name: string;
+  last_name: string;
+  contact_number: string | null;
+  address: string | null;
+  barangay: string | null;
+  birthdate: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -31,7 +42,11 @@ interface AuthContextType {
   loading: boolean;
   hasEstablishments: boolean;
   hasRegisteredEstablishments: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  /** "citizen" = logged in via Citizen Information Supabase; "hsm" = staff via HSM Supabase */
+  authRealm: "citizen" | "hsm" | null;
+  /** Populated when authRealm === "citizen" — fetched from Citizen DB, not stored in HSM */
+  citizenProfile: CitizenProfile | null;
+  signIn: (email: string, password: string, userType: "citizen" | "staff") => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
@@ -45,88 +60,214 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [hasEstablishments, setHasEstablishments] = useState(false);
   const [hasRegisteredEstablishments, setHasRegisteredEstablishments] = useState(false);
+  const [authRealm, setAuthRealm] = useState<"citizen" | "hsm" | null>(null);
+  const [citizenProfile, setCitizenProfile] = useState<CitizenProfile | null>(null);
 
-  const fetchUserRole = async (userId: string) => {
-    const { data } = await supabase.rpc('get_user_role', { _user_id: userId });
+  const fetchCitizenProfile = useCallback(async (userId: string): Promise<CitizenProfile | null> => {
+    const row = (data: Record<string, unknown> | null): CitizenProfile | null => {
+      if (!data) return null;
+      return {
+        first_name: (data.first_name as string) ?? "",
+        last_name: (data.last_name as string) ?? "",
+        contact_number: (data.contact_number as string | null) ?? null,
+        address: (data.address as string | null) ?? null,
+        barangay: (data.barangay as string | null) ?? null,
+        birthdate: (data.birthdate as string | null) ?? null,
+      };
+    };
+    const { data: byId } = await citizenSupabase
+      .from("profiles")
+      .select("first_name, last_name, contact_number, address, barangay, birthdate")
+      .eq("id", userId)
+      .maybeSingle();
+    if (byId) return row(byId as Record<string, unknown>);
+    const { data: byUserId } = await citizenSupabase
+      .from("profiles")
+      .select("first_name, last_name, contact_number, address, barangay, birthdate")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return row(byUserId as Record<string, unknown> | null);
+  }, []);
+
+  const fetchUserRole = useCallback(async (userId: string) => {
+    const { data } = await hsmSupabase.rpc("get_user_role", { _user_id: userId });
     if (data) {
       const mappedRole = data === "BusinessOwner_User" ? "Citizen_User" : (data as UserRole);
       setCurrentRole(mappedRole);
     }
-  };
+  }, []);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('user_id', userId)
+  const fetchHsmProfile = useCallback(async (userId: string) => {
+    const { data } = await hsmSupabase
+      .from("profiles")
+      .select("full_name")
+      .eq("user_id", userId)
       .single();
-    if (data) {
-      setUserName(data.full_name || '');
-    }
-  };
+    if (data) setUserName((data as { full_name?: string }).full_name || "");
+  }, []);
 
-  const fetchEstablishments = async (userId: string) => {
-    const { data } = await supabase
-      .from('establishments')
-      .select('id, status')
-      .eq('user_id', userId);
+  const fetchEstablishments = useCallback(async (userId: string) => {
+    const { data } = await hsmSupabase
+      .from("establishments")
+      .select("id, status")
+      .eq("user_id", userId);
     setHasEstablishments(!!(data && data.length > 0));
-    setHasRegisteredEstablishments(!!(data && data.some((e: { status: string }) => e.status === 'registered')));
-  };
+    setHasRegisteredEstablishments(!!(data && data.some((e: { status: string }) => e.status === "registered")));
+  }, []);
 
-  const fetchUserData = (userId: string) => {
-    fetchUserRole(userId);
-    fetchProfile(userId);
-    fetchEstablishments(userId);
-  };
+  const applyCitizenSession = useCallback(
+    async (citizenUser: User) => {
+      setUser(citizenUser);
+      setSession(await citizenSupabase.auth.getSession().then((r) => r.data.session));
+      setAuthRealm("citizen");
+      setCurrentRole("Citizen_User");
+      const profile = await fetchCitizenProfile(citizenUser.id);
+      setCitizenProfile(profile);
+      setUserName(
+        profile ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "" : ""
+      );
+      await fetchEstablishments(citizenUser.id);
+    },
+    [fetchCitizenProfile, fetchEstablishments]
+  );
+
+  const applyHsmSession = useCallback(
+    async (hsmUser: User) => {
+      setUser(hsmUser);
+      setSession(await hsmSupabase.auth.getSession().then((r) => r.data.session));
+      setAuthRealm("hsm");
+      setCitizenProfile(null);
+      fetchUserRole(hsmUser.id);
+      fetchHsmProfile(hsmUser.id);
+      fetchEstablishments(hsmUser.id);
+    },
+    [fetchUserRole, fetchHsmProfile, fetchEstablishments]
+  );
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => fetchUserData(session.user.id), 0);
-        } else {
+    let mounted = true;
+
+    const restoreSession = async () => {
+      const [citizenRes, hsmRes] = await Promise.all([
+        citizenSupabase.auth.getSession(),
+        hsmSupabase.auth.getSession(),
+      ]);
+      if (!mounted) return;
+
+      const citizenSession = citizenRes.data.session;
+      const hsmSession = hsmRes.data.session;
+
+      if (citizenSession?.user) {
+        await applyCitizenSession(citizenSession.user);
+      } else if (hsmSession?.user) {
+        await applyHsmSession(hsmSession.user);
+      } else {
+        setUser(null);
+        setSession(null);
+        setAuthRealm(null);
+        setCurrentRole("Citizen_User");
+        setUserName("");
+        setCitizenProfile(null);
+        setHasEstablishments(false);
+        setHasRegisteredEstablishments(false);
+      }
+      setLoading(false);
+    };
+
+    restoreSession();
+
+    const citizenSub = citizenSupabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      if (session?.user && !hsmSupabase.auth.getSession().then((r) => r.data.session?.user)) {
+        await applyCitizenSession(session.user);
+      } else if (!session) {
+        const hsmSession = await hsmSupabase.auth.getSession();
+        if (!hsmSession.data.session) {
+          setUser(null);
+          setSession(null);
+          setAuthRealm(null);
           setCurrentRole("Citizen_User");
           setUserName("");
+          setCitizenProfile(null);
           setHasEstablishments(false);
           setHasRegisteredEstablishments(false);
         }
-        setLoading(false);
       }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    const hsmSub = hsmSupabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        const citizenSession = await citizenSupabase.auth.getSession();
+        if (!citizenSession.data.session?.user) await applyHsmSession(session.user);
+      } else if (!session) {
+        const citizenSession = await citizenSupabase.auth.getSession();
+        if (!citizenSession.data.session) {
+          setUser(null);
+          setSession(null);
+          setAuthRealm(null);
+          setCurrentRole("Citizen_User");
+          setUserName("");
+          setCitizenProfile(null);
+          setHasEstablishments(false);
+          setHasRegisteredEstablishments(false);
+        }
+      }
+    });
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error as Error | null };
+    return () => {
+      mounted = false;
+      citizenSub.data.subscription.unsubscribe();
+      hsmSub.data.subscription.unsubscribe();
+    };
+  }, [applyCitizenSession, applyHsmSession]);
+
+  const signIn = async (
+    email: string,
+    password: string,
+    userType: "citizen" | "staff"
+  ): Promise<{ error: Error | null }> => {
+    if (userType === "citizen") {
+      const { data, error } = await citizenSupabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error as Error };
+      if (data.user) await applyCitizenSession(data.user);
+      return { error: null };
+    } else {
+      const { data, error } = await hsmSupabase.auth.signInWithPassword({ email, password });
+      if (error) return { error: error as Error };
+      if (data.user) await applyHsmSession(data.user);
+      return { error: null };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await Promise.all([citizenSupabase.auth.signOut(), hsmSupabase.auth.signOut()]);
     setUser(null);
     setSession(null);
+    setAuthRealm(null);
     setCurrentRole("Citizen_User");
     setUserName("");
+    setCitizenProfile(null);
     setHasEstablishments(false);
     setHasRegisteredEstablishments(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, currentRole, userName, loading, hasEstablishments, hasRegisteredEstablishments, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        currentRole,
+        userName,
+        loading,
+        hasEstablishments,
+        hasRegisteredEstablishments,
+        authRealm,
+        citizenProfile,
+        signIn,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

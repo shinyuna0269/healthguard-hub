@@ -47,17 +47,14 @@ import CitizenQR from "@/pages/citizen/CitizenQR";
 import HealthServices from "@/pages/citizen/HealthServices";
 import VaccinationNutrition from "@/pages/citizen/VaccinationNutrition";
 import DiseaseReporting from "@/pages/citizen/DiseaseReporting";
-import SanitationComplaints from "@/pages/citizen/SanitationComplaints";
+import Complaints from "@/pages/citizen/Complaints";
 import MyEstablishments from "@/pages/citizen/MyEstablishments";
 import SanitaryPermitApplication from "@/pages/citizen/SanitaryPermitApplication";
 import InspectionStatus from "@/pages/citizen/InspectionStatus";
 import Certificates from "@/pages/citizen/Certificates";
 import Payments from "@/pages/citizen/Payments";
 import ServiceRequests from "@/pages/citizen/ServiceRequests";
-import SepticDesludging from "@/pages/citizen/SepticDesludging";
-import WastewaterComplaint from "@/pages/citizen/WastewaterComplaint";
 import WaterwayCleanupReport from "@/pages/citizen/WaterwayCleanupReport";
-import EnvironmentalComplianceRequest from "@/pages/citizen/EnvironmentalComplianceRequest";
 import DesludgingScheduleViewer from "@/pages/citizen/DesludgingScheduleViewer";
 
 const queryClient = new QueryClient();
@@ -144,17 +141,15 @@ const App = () => (
               <Route path="/citizen/health" element={<HealthServices />} />
               <Route path="/citizen/vaccination" element={<VaccinationNutrition />} />
               <Route path="/citizen/disease-reporting" element={<DiseaseReporting />} />
-              <Route path="/citizen/sanitation-complaints" element={<SanitationComplaints />} />
+              <Route path="/citizen/complaints" element={<Complaints />} />
+              <Route path="/citizen/sanitation-complaints" element={<Complaints />} />
               <Route path="/citizen/establishments" element={<MyEstablishments />} />
               <Route path="/citizen/sanitary-permit" element={<SanitaryPermitApplication />} />
               <Route path="/citizen/inspections" element={<InspectionStatus />} />
               <Route path="/citizen/certificates" element={<Certificates />} />
               <Route path="/citizen/payments" element={<Payments />} />
               <Route path="/citizen/requests" element={<ServiceRequests />} />
-              <Route path="/citizen/septic-desludging" element={<SepticDesludging />} />
-              <Route path="/citizen/wastewater-complaint" element={<WastewaterComplaint />} />
               <Route path="/citizen/waterway-cleanup" element={<WaterwayCleanupReport />} />
-              <Route path="/citizen/environmental-compliance" element={<EnvironmentalComplianceRequest />} />
               <Route path="/citizen/desludging-schedule" element={<DesludgingScheduleViewer />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>

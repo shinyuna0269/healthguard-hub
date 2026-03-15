@@ -126,7 +126,7 @@ export const QC_BARANGAYS = [
 
 export type QCBarangay = (typeof QC_BARANGAYS)[number];
 
-/** Sanitation complaint types for unified sanitation_complaints table */
+/** Sanitation complaint types for unified sanitation_complaints table (legacy) */
 export const SANITATION_COMPLAINT_TYPES = [
   "Garbage accumulation",
   "Illegal dumping",
@@ -134,6 +134,16 @@ export const SANITATION_COMPLAINT_TYPES = [
   "Septic overflow",
   "Drainage blockage",
   "Unsanitary establishments",
+] as const;
+
+/** Unified complaint types for Complaints page */
+export const COMPLAINT_TYPES = [
+  "Wastewater Discharge",
+  "Illegal Dumping",
+  "Clogged Drainage",
+  "Unsanitary Establishment",
+  "Garbage in Waterways",
+  "Environmental Hazard",
 ] as const;
 
 export type SanitationComplaintType = (typeof SANITATION_COMPLAINT_TYPES)[number];

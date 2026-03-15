@@ -3,7 +3,6 @@ import {
   Stethoscope,
   ClipboardCheck,
   Syringe,
-  Droplets,
   Activity,
   QrCode,
   HeartPulse,
@@ -24,7 +23,6 @@ import {
   Users,
   PlugZap,
   Waves,
-  Leaf,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";
@@ -83,18 +81,10 @@ const citizenSections: NavSection[] = [
   {
     label: "Wastewater & Septic Services",
     items: [
-      { title: "Sanitation Complaints", url: "/citizen/sanitation-complaints", icon: MessageSquare },
-      { title: "Septic Tank Desludging", url: "/citizen/septic-desludging", icon: Droplets },
-      { title: "Wastewater Complaint", url: "/citizen/wastewater-complaint", icon: MessageSquare },
+      { title: "Complaints", url: "/citizen/complaints", icon: MessageSquare },
+      { title: "Service Requests", url: "/citizen/requests", icon: FileText },
       { title: "Waterway Cleanup Report", url: "/citizen/waterway-cleanup", icon: Waves },
-      { title: "Environmental Compliance Request", url: "/citizen/environmental-compliance", icon: Leaf },
       { title: "Desludging Schedule Viewer", url: "/citizen/desludging-schedule", icon: CalendarDays },
-    ],
-  },
-  {
-    label: "Requests & Tracking",
-    items: [
-      { title: "My Service Requests", url: "/citizen/requests", icon: FileText },
     ],
   },
 ];

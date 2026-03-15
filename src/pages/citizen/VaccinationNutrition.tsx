@@ -26,6 +26,8 @@ const VaccinationNutrition = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
   const [form, setForm] = useState({
     patient_name: "",
     patient_type: "Child",
@@ -92,16 +94,25 @@ const VaccinationNutrition = () => {
   const cancelled = vaccinations.filter((v) => (v.status || "").toLowerCase() === "cancelled");
 
   const filtered = useMemo(() => {
+    let list = vaccinations;
     const q = search.trim().toLowerCase();
-    if (!q) return vaccinations;
-    const name = (v: any) => (v.patient_name || v.child_name || "").toLowerCase();
-    return vaccinations.filter(
-      (v) =>
-        name(v).includes(q) ||
-        (v.vaccine || "").toLowerCase().includes(q) ||
-        (v.status || "").toLowerCase().includes(q)
-    );
-  }, [vaccinations, search]);
+    if (q) {
+      const name = (v: any) => (v.patient_name || v.child_name || "").toLowerCase();
+      list = list.filter(
+        (v) =>
+          name(v).includes(q) ||
+          (v.vaccine || "").toLowerCase().includes(q) ||
+          (v.status || "").toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter && statusFilter !== "all") {
+      list = list.filter((v) => (v.status || "").toLowerCase() === statusFilter.toLowerCase());
+    }
+    if (dateFilter) {
+      list = list.filter((v) => (v.vaccination_date || "").startsWith(dateFilter));
+    }
+    return list;
+  }, [vaccinations, search, statusFilter, dateFilter]);
 
   const displayName = (v: any) => v.patient_name || v.child_name || "—";
   const displayType = (v: any) => v.patient_type || "—";
@@ -157,7 +168,7 @@ const VaccinationNutrition = () => {
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-heading text-sm">Upcoming Vaccination Schedules</DialogTitle></DialogHeader>
-            <p className="text-xs text-muted-foreground">By barangay, health center, and assigned BHW. Date and time shown.</p>
+            <p className="text-xs text-muted-foreground">By barangay and health center. Date and time shown.</p>
             {!schedules.length ? (
               <p className="text-sm text-muted-foreground py-4">No upcoming schedules in the system. Check with your barangay health center.</p>
             ) : (
@@ -169,7 +180,6 @@ const VaccinationNutrition = () => {
                       <span className="text-muted-foreground">{s.barangay}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">{s.health_center_location || "Health Center"}</p>
-                    <p className="text-xs text-muted-foreground">BHW: {s.assigned_bhw || "—"}</p>
                     <p className="text-xs font-medium mt-1">
                       {s.schedule_date} {s.schedule_time ? `· ${String(s.schedule_time).slice(0, 5)}` : ""}
                     </p>
@@ -230,7 +240,6 @@ const VaccinationNutrition = () => {
             { label: "Patient Name", value: displayName(selectedRecord) },
             { label: "Patient Type", value: displayType(selectedRecord) },
             { label: "Age", value: selectedRecord.age ?? "—" },
-            { label: "BHW Name", value: selectedRecord.bhw_name ?? "—" },
             { label: "Status", value: selectedRecord.status, isStatus: true },
             { label: "Recorded", value: new Date(selectedRecord.created_at).toLocaleDateString() },
           ]}
@@ -239,9 +248,31 @@ const VaccinationNutrition = () => {
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name, vaccine, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input placeholder="Search by vaccine name..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="scheduled">Scheduled</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="missed">Missed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="month"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-[160px]"
+              placeholder="Date"
+            />
           </div>
         </CardHeader>
         <CardContent>
@@ -255,7 +286,6 @@ const VaccinationNutrition = () => {
                   <TableHead className="text-xs">Vaccine</TableHead>
                   <TableHead className="text-xs">Patient Name</TableHead>
                   <TableHead className="text-xs hidden md:table-cell">Patient Type</TableHead>
-                  <TableHead className="text-xs hidden md:table-cell">BHW</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -266,7 +296,6 @@ const VaccinationNutrition = () => {
                     <TableCell className="text-sm">{v.vaccine}</TableCell>
                     <TableCell className="text-sm">{displayName(v)}</TableCell>
                     <TableCell className="text-sm hidden md:table-cell">{displayType(v)}</TableCell>
-                    <TableCell className="text-sm hidden md:table-cell">{v.bhw_name ?? "—"}</TableCell>
                     <TableCell><StatusBadge status={v.status} /></TableCell>
                   </TableRow>
                 ))}

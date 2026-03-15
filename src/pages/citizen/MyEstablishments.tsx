@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { Plus, Building2, Pencil, Trash2, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const STATUS_LABELS: Record<string, string> = {
   pending_verification: "Submitted",
@@ -49,6 +50,8 @@ const MyEstablishments = () => {
   const [permitFile, setPermitFile] = useState<File | null>(null);
   const permitInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
 
   const { data: establishments = [] } = useQuery({
     queryKey: ["citizen_establishments", user?.id],
@@ -61,16 +64,25 @@ const MyEstablishments = () => {
   });
 
   const filtered = useMemo(() => {
+    let list = establishments;
     const q = search.trim().toLowerCase();
-    if (!q) return establishments;
-    return establishments.filter(
-      (e) =>
-        (e.business_name || "").toLowerCase().includes(q) ||
-        (e.barangay || "").toLowerCase().includes(q) ||
-        (e.business_permit_number || "").toLowerCase().includes(q) ||
-        (STATUS_LABELS[e.status] || e.status || "").toLowerCase().includes(q)
-    );
-  }, [establishments, search]);
+    if (q) {
+      list = list.filter(
+        (e) =>
+          (e.business_name || "").toLowerCase().includes(q) ||
+          (e.barangay || "").toLowerCase().includes(q) ||
+          (e.business_permit_number || "").toLowerCase().includes(q) ||
+          (STATUS_LABELS[e.status] || e.status || "").toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter && statusFilter !== "all") {
+      list = list.filter((e) => (e.status || "") === statusFilter);
+    }
+    if (dateFilter) {
+      list = list.filter((e) => (e.created_at || "").slice(0, 7) === dateFilter);
+    }
+    return list;
+  }, [establishments, search, statusFilter, dateFilter]);
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -267,9 +279,26 @@ const MyEstablishments = () => {
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name, barangay, permit #, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input placeholder="Search by name, barangay, permit #, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="pending_verification">Submitted</SelectItem>
+                <SelectItem value="under_review">Under Review</SelectItem>
+                <SelectItem value="requires_correction">Correction Required</SelectItem>
+                <SelectItem value="inspection_scheduled">Inspection Scheduled</SelectItem>
+                <SelectItem value="registered">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input type="month" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-[160px]" />
           </div>
         </CardHeader>
         <CardContent>
