@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,7 @@ const BhwServiceRequests = () => {
   const { user } = useAuth();
   const [citizenId, setCitizenId] = useState("");
   const [type, setType] = useState(requestTypes[0]);
+  const [customType, setCustomType] = useState("");
   const [description, setDescription] = useState("");
   const [search, setSearch] = useState("");
   const queryClient = useQueryClient();
@@ -41,10 +42,11 @@ const BhwServiceRequests = () => {
 
   const addMutation = useMutation({
     mutationFn: async () => {
+      const finalType = type === "Other" && customType ? customType : type;
       const { error } = await supabase.from("service_requests").insert({
         user_id: user!.id,
-        request_type: type,
-        title: `${type} (assisted)`,
+        request_type: finalType,
+        title: `${finalType} (assisted)`,
         description: `Citizen ID: ${citizenId || "N/A"} — ${description}`,
         status: "Submitted",
       });
@@ -54,23 +56,28 @@ const BhwServiceRequests = () => {
       queryClient.invalidateQueries({ queryKey: ["bhw_service_requests"] });
       setCitizenId("");
       setType(requestTypes[0]);
+      setCustomType("");
       setDescription("");
       toast.success("Assisted request submitted");
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const filtered = requests.filter(
-    (r) =>
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.request_type.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return requests.filter(
+      (r) =>
+        r.title.toLowerCase().includes(q) ||
+        r.request_type.toLowerCase().includes(q) ||
+        (r.status || "").toLowerCase().includes(q),
+    );
+  }, [requests, search]);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-heading">Assisted Service Requests</h1>
+          <h1 className="text-2xl font-bold font-heading">Assisted Requests</h1>
           <p className="text-sm text-muted-foreground">
             Submit requests for citizens who do not have access to the online portal and track their status.
           </p>
@@ -100,7 +107,7 @@ const BhwServiceRequests = () => {
                 value={type}
                 onChange={(e) => setType(e.target.value)}
               >
-                {requestTypes.map((rt) => (
+                {[...requestTypes, "Other"].map((rt) => (
                   <option key={rt} value={rt}>
                     {rt}
                   </option>
@@ -108,6 +115,16 @@ const BhwServiceRequests = () => {
               </select>
             </div>
           </div>
+          {type === "Other" && (
+            <div>
+              <Label className="text-xs">Custom Request Type</Label>
+              <Input
+                placeholder="Specify request type"
+                value={customType}
+                onChange={(e) => setCustomType(e.target.value)}
+              />
+            </div>
+          )}
           <div>
             <Label className="text-xs">Description</Label>
             <Textarea
@@ -121,7 +138,7 @@ const BhwServiceRequests = () => {
             size="sm"
             className="gap-1"
             onClick={() => addMutation.mutate()}
-            disabled={addMutation.isPending || !description}
+            disabled={addMutation.isPending || !description || (type === "Other" && !customType)}
           >
             <Send className="h-4 w-4" /> Submit Request
           </Button>

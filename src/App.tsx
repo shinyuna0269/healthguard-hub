@@ -61,15 +61,37 @@ const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
-  if (user) return <Navigate to="/" replace />;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+
   return <>{children}</>;
 };
 
@@ -100,12 +122,24 @@ const getDashboardPath = (role) => {
 };
 
 const RoleDashboard = () => {
-  const { currentRole } = useAuth();
+  const { user, loading, authRealm, currentRole } = useAuth();
   const navigate = useNavigate();
+
   useEffect(() => {
+    // Avoid redirecting while auth is still resolving, or before
+    // a staff user's role has been fetched from the HSM database.
+    if (loading || !user) return;
+
+    if (authRealm === "hsm" && currentRole === "Citizen_User") {
+      // For staff/BHW users signed in via HSM, wait until get_user_role
+      // has resolved and updated currentRole away from the default.
+      return;
+    }
+
     const path = getDashboardPath(currentRole);
     navigate(path, { replace: true });
-  }, [currentRole, navigate]);
+  }, [authRealm, currentRole, loading, navigate, user]);
+
   return null;
 };
 

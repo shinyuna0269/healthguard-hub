@@ -50,7 +50,8 @@ const BhwBarangayHealth = () => {
 
   // Disease by type
   const diseaseByType = cases.reduce<Record<string, number>>((acc, c) => {
-    acc[c.disease] = (acc[c.disease] || 0) + c.case_count;
+    const count = typeof c.case_count === "number" && c.case_count > 0 ? c.case_count : 1;
+    acc[c.disease] = (acc[c.disease] || 0) + count;
     return acc;
   }, {});
   const diseaseChartData = Object.entries(diseaseByType).map(([name, value]) => ({ name, value }));

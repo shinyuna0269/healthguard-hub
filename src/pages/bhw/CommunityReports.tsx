@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldAlert, Send, CheckCircle, XCircle } from "lucide-react";
+import { ShieldAlert, Send, CheckCircle, XCircle, Search } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
 import { QC_BARANGAYS, QC_BARANGAY_COORDS } from "@/lib/constants";
@@ -30,7 +30,11 @@ const BhwCommunityReports = () => {
   const [disease, setDisease] = useState<string>(DISEASES[0]);
   const [barangay, setBarangay] = useState<string>(QC_BARANGAYS[0]);
   const [details, setDetails] = useState("");
-  const [citizenId, setCitizenId] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [barangayFilter, setBarangayFilter] = useState<string>("all");
+  const [diseaseFilter, setDiseaseFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("");
 
   const { data: reports = [] } = useQuery({
     queryKey: ["bhw_disease_reports"],
@@ -44,13 +48,54 @@ const BhwCommunityReports = () => {
     },
   });
 
+  const filteredReports = useMemo(() => {
+    let list = reports as any[];
+    const q = search.trim().toLowerCase();
+
+    if (q) {
+      list = list.filter(
+        (r) =>
+          (r.disease || "").toLowerCase().includes(q) ||
+          (r.patient_location || "").toLowerCase().includes(q) ||
+          (r.details || "").toLowerCase().includes(q),
+      );
+    }
+
+    if (statusFilter !== "all") {
+      list = list.filter(
+        (r) =>
+          (r.status || "").toLowerCase() === statusFilter.toLowerCase(),
+      );
+    }
+
+    if (barangayFilter !== "all") {
+      list = list.filter((r) => (r.patient_location || "") === barangayFilter);
+    }
+
+    if (diseaseFilter !== "all") {
+      list = list.filter((r) => (r.disease || "") === diseaseFilter);
+    }
+
+    if (dateFilter) {
+      list = list.filter((r) => {
+        const date =
+          r.case_date ||
+          (r.created_at && new Date(r.created_at).toISOString().slice(0, 10));
+        return (date || "").startsWith(dateFilter);
+      });
+    }
+
+    return list;
+  }, [reports, search, statusFilter, barangayFilter, diseaseFilter, dateFilter]);
+
   const reportMutation = useMutation({
     mutationFn: async () => {
       const { error } = await (supabase as any).from("disease_reports").insert({
         disease,
         patient_location: barangay,
-        details: `Citizen ID: ${citizenId || "N/A"} — ${details}`,
+        details,
         reported_by: user!.id,
+        bhw_user_id: user!.id,
         reporter: "BHW Field Report",
         status: "Under BHW Review",
       });
@@ -59,7 +104,6 @@ const BhwCommunityReports = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bhw_disease_reports"] });
       setDetails("");
-      setCitizenId("");
       toast.success("Disease report submitted for verification");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -103,8 +147,10 @@ const BhwCommunityReports = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-heading">Community Reports</h1>
-        <p className="text-sm text-muted-foreground">Review citizen disease reports and verify cases for the Health Surveillance System</p>
+        <h1 className="text-2xl font-bold font-heading">Disease Case Reports</h1>
+        <p className="text-sm text-muted-foreground">
+          Submit and verify disease case reports from the community for the Health Surveillance System.
+        </p>
       </div>
 
       <Card className="glass-card">
@@ -115,10 +161,6 @@ const BhwCommunityReports = () => {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Citizen ID (optional)</Label>
-              <Input placeholder="GSMS-2026-XXXXXXXX" value={citizenId} onChange={(e) => setCitizenId(e.target.value)} />
-            </div>
             <div>
               <Label className="text-xs">Disease Type</Label>
               <select className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs" value={disease} onChange={(e) => setDisease(e.target.value)}>
@@ -149,13 +191,69 @@ const BhwCommunityReports = () => {
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-heading">Disease Reports — Verification Workflow</CardTitle>
+          <CardTitle className="text-sm font-heading">Disease Case Reports — Verification Workflow</CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             Submitted → Under BHW Review → Under Medical Verification → Verified Case (appears on map) or Closed
           </p>
         </CardHeader>
         <CardContent>
-          {reports.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                placeholder="Search by disease, barangay, or details..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 max-w-xs"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                {REPORT_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={diseaseFilter} onValueChange={setDiseaseFilter}>
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="Disease" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All diseases</SelectItem>
+                {DISEASES.map((d) => (
+                  <SelectItem key={d} value={d}>
+                    {d}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={barangayFilter} onValueChange={setBarangayFilter}>
+              <SelectTrigger className="h-8 w-[150px]">
+                <SelectValue placeholder="Barangay" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All barangays</SelectItem>
+                {QC_BARANGAYS.map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="month"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="h-8 w-[150px]"
+            />
+          </div>
+          {filteredReports.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">No disease reports yet.</p>
           ) : (
             <Table>
@@ -169,7 +267,7 @@ const BhwCommunityReports = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reports.map((r) => (
+                {filteredReports.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="text-sm">{r.case_date ?? (r.created_at && new Date(r.created_at).toLocaleDateString())}</TableCell>
                     <TableCell className="text-sm">{r.disease}</TableCell>

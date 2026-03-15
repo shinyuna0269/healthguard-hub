@@ -1,35 +1,70 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { ScanLine, Search, UserPlus } from "lucide-react";
+import { ScanLine, Search } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { QrScanner } from "@yudiel/react-qr-scanner";
 
 const CitizenAssistance = () => {
-  const [qrValue, setQrValue] = useState("");
+  const { user } = useAuth();
+  const [scannedId, setScannedId] = useState("");
   const [manualId, setManualId] = useState("");
 
-  const citizenId = qrValue || manualId;
-  const userPrefix = citizenId.replace("GSMS-2026-", "").toLowerCase();
+  const citizenId = scannedId || manualId;
+
+  const userPrefix = useMemo(() => {
+    if (!citizenId) return "";
+    return citizenId.replace("GSMS-2026-", "").toLowerCase();
+  }, [citizenId]);
 
   const { data: profile } = useQuery({
     queryKey: ["bhw_citizen_profile", userPrefix],
     queryFn: async () => {
-      if (!userPrefix || userPrefix.length === 0) return null;
-      // Demo lookup: try to find a profile whose user_id starts with the scanned prefix
+      if (!userPrefix) return null;
       const { data } = await supabase
         .from("profiles")
-        .select("*")
+        .select("user_id, full_name, email, gender, birthdate, barangay")
         .ilike("user_id", `${userPrefix}%`)
         .limit(1)
         .maybeSingle();
       return data;
     },
     enabled: !!userPrefix,
+  });
+
+  const citizenUserId = profile?.user_id as string | undefined;
+
+  const { data: vaccinations = [] } = useQuery({
+    queryKey: ["bhw_citizen_vaccinations", citizenUserId],
+    queryFn: async () => {
+      if (!citizenUserId) return [];
+      const { data } = await supabase
+        .from("vaccinations")
+        .select("*")
+        .order("vaccination_date", { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: !!citizenUserId,
+  });
+
+  const { data: nutrition = [] } = useQuery({
+    queryKey: ["bhw_citizen_nutrition", citizenUserId],
+    queryFn: async () => {
+      if (!citizenUserId) return [];
+      const { data } = await supabase
+        .from("nutrition_records")
+        .select("*")
+        .order("monitoring_date", { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+    enabled: !!citizenUserId,
   });
 
   return (
@@ -51,22 +86,41 @@ const CitizenAssistance = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Label className="text-xs">QR Citizen ID</Label>
-            <Input
-              placeholder="GSMS-2026-XXXXXXXX"
-              value={manualId}
-              onChange={(e) => setManualId(e.target.value)}
-            />
-            <p className="text-[11px] text-muted-foreground">
-              Camera-based QR scanning can be integrated with device camera in production. For this demo, paste or
-              type the QR Citizen ID.
-            </p>
-            {citizenId && (
-              <div className="flex flex-col items-center gap-2 pt-2">
-                <QRCodeSVG value={citizenId} size={96} level="H" />
-                <p className="text-[11px] font-mono text-muted-foreground">{citizenId}</p>
+            <div className="space-y-2">
+              <Label className="text-xs">Scan QR using camera</Label>
+              <div className="rounded-md border bg-muted/40 overflow-hidden">
+                <QrReader
+                  constraints={{ facingMode: "environment" }}
+                  onResult={(result) => {
+                    if (result?.getText) {
+                      const value = result.getText();
+                      if (value && value !== scannedId) {
+                        setScannedId(value);
+                      }
+                    }
+                  }}
+                  scanDelay={400}
+                  containerStyle={{ width: "100%" }}
+                  videoContainerStyle={{ width: "100%" }}
+                />
               </div>
-            )}
+            </div>
+            <div className="space-y-2 pt-2">
+              <Label className="text-xs">Or manually enter QR Citizen ID</Label>
+              <Input
+                placeholder="GSMS-2026-XXXXXXXX"
+                value={manualId}
+                onChange={(e) => setManualId(e.target.value)}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                You can scan using the camera or type the QR Citizen ID if scanning is not available.
+              </p>
+              {citizenId && (
+                <p className="text-[11px] font-mono text-muted-foreground break-all">
+                  Current ID: {citizenId}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -97,76 +151,68 @@ const CitizenAssistance = () => {
                     <p className="text-[11px] text-muted-foreground">Email</p>
                     <p className="text-xs truncate">{profile.email || "—"}</p>
                   </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground">Barangay</p>
+                    <p className="text-xs truncate">{profile.barangay || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground">Gender</p>
+                    <p className="text-xs truncate">{profile.gender || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground">Birthdate</p>
+                    <p className="text-xs truncate">
+                      {profile.birthdate ? new Date(profile.birthdate).toLocaleDateString() : "—"}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1.5 pt-2">
-                  <Button variant="outline" size="sm" className="justify-start text-xs">
-                    Submit Request for Citizen
-                  </Button>
-                  <Button variant="outline" size="sm" className="justify-start text-xs">
-                    Record Disease Case
-                  </Button>
+                <div className="pt-3 space-y-2">
+                  <p className="text-xs text-muted-foreground">Health summary (recent records)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div className="rounded-md border border-border bg-muted/30 p-2">
+                      <p className="text-[11px] text-muted-foreground mb-1">Recent Vaccinations</p>
+                      {vaccinations.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No vaccination records found.</p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {vaccinations.map((v) => (
+                            <li key={v.id} className="text-xs flex justify-between gap-2">
+                              <span className="truncate">{v.vaccine}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {v.vaccination_date}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                    <div className="rounded-md border border-border bg-muted/30 p-2">
+                      <p className="text-[11px] text-muted-foreground mb-1">Recent Nutrition Monitoring</p>
+                      {nutrition.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">No nutrition records found.</p>
+                      ) : (
+                        <ul className="space-y-1">
+                          {nutrition.map((n) => (
+                            <li key={n.id} className="text-xs flex justify-between gap-2">
+                              <span className="truncate">{n.child_name || "Child"}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {n.nutritional_status || "—"}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground pt-1">
+                    BHWs can assist and submit records but cannot edit clinical health records.
+                  </p>
                 </div>
-                <p className="text-[11px] text-muted-foreground pt-1">
-                  BHWs can assist and submit records but cannot edit clinical health records.
-                </p>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
-
-      <Card className="glass-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-heading flex items-center gap-2">
-            <UserPlus className="h-4 w-4 text-primary" /> Assisted Citizen Registration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            For residents without an online account, BHWs can collect basic details and forward them to the health
-            center for full registration.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="md:col-span-1">
-              <Label className="text-xs">Full Name</Label>
-              <Input placeholder="Full name" />
-            </div>
-            <div>
-              <Label className="text-xs">Birthdate</Label>
-              <Input type="date" />
-            </div>
-            <div>
-              <Label className="text-xs">Barangay</Label>
-              <Input placeholder="Barangay" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label className="text-xs">Address</Label>
-              <Input placeholder="House / Street / Purok" />
-            </div>
-            <div>
-              <Label className="text-xs">Contact Number</Label>
-              <Input placeholder="09XXXXXXXXX" />
-            </div>
-            <div>
-              <Label className="text-xs">Email (optional)</Label>
-              <Input placeholder="email@example.com" />
-            </div>
-          </div>
-          <div>
-            <Label className="text-xs">Notes (optional)</Label>
-            <Textarea rows={2} placeholder="Additional notes for health center staff..." />
-          </div>
-          <Button size="sm" className="mt-1">
-            Submit Assisted Registration
-          </Button>
-          <p className="text-[11px] text-muted-foreground pt-1">
-            In a full deployment this form would create a citizen record and QR ID; in this demo it documents assisted
-            registrations for follow-up by Health Center Staff.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 };

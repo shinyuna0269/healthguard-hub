@@ -105,18 +105,70 @@ export function AppSidebar() {
     );
   } else if (currentRole === "BHW_User") {
     sections = [
-      { label: "Dashboard", items: [{ title: "BHW Dashboard", url: "/", icon: LayoutDashboard }] },
-      { label: "Citizen Service Assistance", items: [{ title: "Citizen Service Assistance", url: "/citizen-service-assistance", icon: ScanLine }] },
-      { label: "Health Programs", items: [
-        { title: "Vaccination Requests", url: "/health-programs/vaccination-requests", icon: Syringe },
-        { title: "Nutrition Monitoring", url: "/health-programs/nutrition-monitoring", icon: HeartPulse },
-      ]},
-      { label: "Community Reports", items: [
-        { title: "Disease Case Reporting", url: "/bhw/community-reports", icon: ShieldAlert },
-        { title: "Sanitation Complaints", url: "/bhw/complaints", icon: MessageSquare },
-      ]},
-      { label: "Service Requests", items: [{ title: "ASSISTED REQUEST & TRACKING", url: "/assisted-requests", icon: FileText }] },
-      { label: "Barangay Health Data", items: [{ title: "Health Overview", url: "/bhw/barangay-health", icon: BarChart3 }] },
+      {
+        label: "Dashboard",
+        items: [{ title: "BHW Dashboard", url: "/", icon: LayoutDashboard }],
+      },
+      {
+        label: "Citizen Service Assistance",
+        items: [
+          {
+            title: "Citizen Service Assistance",
+            url: "/citizen-service-assistance",
+            icon: ScanLine,
+          },
+        ],
+      },
+      {
+        label: "Health Programs",
+        items: [
+          {
+            title: "Vaccination Requests",
+            url: "/health-programs/vaccination-requests",
+            icon: Syringe,
+          },
+          {
+            title: "Nutrition Monitoring",
+            url: "/health-programs/nutrition-monitoring",
+            icon: HeartPulse,
+          },
+        ],
+      },
+      {
+        label: "Community Reports",
+        items: [
+          {
+            title: "Disease Case Reports",
+            url: "/bhw/community-reports",
+            icon: ShieldAlert,
+          },
+          {
+            title: "Sanitation Complaints",
+            url: "/bhw/complaints",
+            icon: MessageSquare,
+          },
+        ],
+      },
+      {
+        label: "Service Requests",
+        items: [
+          {
+            title: "Assisted Requests",
+            url: "/assisted-requests",
+            icon: FileText,
+          },
+        ],
+      },
+      {
+        label: "Barangay Health Data",
+        items: [
+          {
+            title: "Health Overview",
+            url: "/bhw/barangay-health",
+            icon: BarChart3,
+          },
+        ],
+      },
     ];
   } else if (currentRole === "Clerk_User") {
     sections = [
