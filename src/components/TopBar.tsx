@@ -1,6 +1,7 @@
 import { useAuth, ROLE_LABELS } from "@/contexts/AuthContext";
 import { Bell, Search, Moon, Sun } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,23 +16,46 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+const THEME_STORAGE_KEY = "healthguard-theme";
+
 const TopBar = () => {
   const { currentRole, userName, signOut } = useAuth();
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "dark" || stored === "light") return stored === "dark";
+    return document.documentElement.classList.contains("dark");
+  });
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const toggleDark = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle("dark");
-  };
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isDark) {
+      root.classList.add("dark");
+      localStorage.setItem(THEME_STORAGE_KEY, "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem(THEME_STORAGE_KEY, "light");
+    }
+  }, [isDark]);
+
+  useEffect(() => {
+    const isDarkClass = document.documentElement.classList.contains("dark");
+    setIsDark(isDarkClass);
+  }, []);
+
+  const toggleDark = () => setIsDark((prev) => !prev);
 
   return (
     <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 gap-3 shrink-0">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-        <h1 className="text-sm font-extrabold font-heading text-foreground hidden md:block tracking-wide uppercase">
+        <Link
+          to="/"
+          className="text-sm font-extrabold font-heading text-foreground hidden md:block tracking-wide uppercase hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
+        >
           Health & Sanitation Management
-        </h1>
+        </Link>
       </div>
 
       <div className="flex items-center gap-2">

@@ -22,7 +22,7 @@ const suggestedSchedule = [
 const ImmunizationTracker = () => {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ child_name: "", age: "", vaccine: "", vaccination_date: "" });
+  const [form, setForm] = useState({ child_name: "", patient_type: "Child", age: "", vaccine: "", vaccination_date: "" });
   const queryClient = useQueryClient();
 
   const { data: vaccinations = [] } = useQuery({
@@ -47,7 +47,9 @@ const ImmunizationTracker = () => {
     mutationFn: async () => {
       const { error } = await supabase.from("vaccinations").insert({
         child_name: form.child_name,
-        age: form.age,
+        patient_name: form.child_name,
+        patient_type: form.patient_type,
+        age: form.age || null,
         vaccine: form.vaccine,
         vaccination_date: form.vaccination_date || new Date().toISOString().split("T")[0],
       });
@@ -56,7 +58,7 @@ const ImmunizationTracker = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vaccinations"] });
       setOpen(false);
-      setForm({ child_name: "", age: "", vaccine: "", vaccination_date: "" });
+      setForm({ child_name: "", patient_type: "Child", age: "", vaccine: "", vaccination_date: "" });
       toast.success("Record saved");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -77,10 +79,13 @@ const ImmunizationTracker = () => {
             <DialogHeader><DialogTitle className="font-heading">Add Immunization Record</DialogTitle></DialogHeader>
             <div className="grid gap-3">
               <div className="grid grid-cols-2 gap-3">
-                <div><Label className="text-xs">Child Name</Label><Input placeholder="Full name" value={form.child_name} onChange={(e) => setForm({ ...form, child_name: e.target.value })} /></div>
-                <div><Label className="text-xs">Age</Label><Input placeholder="e.g., 6 months" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
+                <div><Label className="text-xs">Patient Name</Label><Input placeholder="Full name" value={form.child_name} onChange={(e) => setForm({ ...form, child_name: e.target.value })} /></div>
+                <div><Label className="text-xs">Patient Type</Label><select className="w-full h-9 rounded-md border border-input bg-background px-2 text-sm" value={form.patient_type} onChange={(e) => setForm({ ...form, patient_type: e.target.value })}><option value="Child">Child</option><option value="Adult">Adult</option><option value="Senior Citizen">Senior Citizen</option><option value="PWD">PWD</option></select></div>
               </div>
-              <div><Label className="text-xs">Vaccine</Label><Input placeholder="Vaccine name" value={form.vaccine} onChange={(e) => setForm({ ...form, vaccine: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label className="text-xs">Age</Label><Input placeholder="e.g., 6 months" value={form.age} onChange={(e) => setForm({ ...form, age: e.target.value })} /></div>
+                <div><Label className="text-xs">Vaccine</Label><Input placeholder="Vaccine name" value={form.vaccine} onChange={(e) => setForm({ ...form, vaccine: e.target.value })} /></div>
+              </div>
               <div><Label className="text-xs">Date</Label><Input type="date" value={form.vaccination_date} onChange={(e) => setForm({ ...form, vaccination_date: e.target.value })} /></div>
               <Button className="w-full" onClick={() => addMutation.mutate()} disabled={addMutation.isPending || !form.child_name || !form.vaccine}>
                 {addMutation.isPending ? "Saving..." : "Save Record"}
@@ -115,7 +120,8 @@ const ImmunizationTracker = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs">Child</TableHead>
+                    <TableHead className="text-xs">Patient Name</TableHead>
+                    <TableHead className="text-xs hidden md:table-cell">Patient Type</TableHead>
                     <TableHead className="text-xs">Age</TableHead>
                     <TableHead className="text-xs">Vaccine</TableHead>
                     <TableHead className="text-xs hidden md:table-cell">Date</TableHead>
@@ -124,9 +130,10 @@ const ImmunizationTracker = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {vaccinations.filter(v => v.child_name.toLowerCase().includes(search.toLowerCase())).map((v) => (
+                  {vaccinations.filter(v => (v.patient_name || v.child_name || "").toLowerCase().includes(search.toLowerCase())).map((v) => (
                     <TableRow key={v.id}>
-                      <TableCell className="font-medium text-sm">{v.child_name}</TableCell>
+                      <TableCell className="font-medium text-sm">{v.patient_name || v.child_name}</TableCell>
+                      <TableCell className="text-sm hidden md:table-cell">{v.patient_type || "—"}</TableCell>
                       <TableCell className="text-sm">{v.age}</TableCell>
                       <TableCell className="text-sm">{v.vaccine}</TableCell>
                       <TableCell className="text-sm hidden md:table-cell">{v.vaccination_date}</TableCell>

@@ -5,31 +5,40 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShieldAlert, Send } from "lucide-react";
+import { ShieldAlert, Send, CheckCircle, XCircle } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { toast } from "sonner";
+import { QC_BARANGAYS, QC_BARANGAY_COORDS } from "@/lib/constants";
 
-const BARANGAYS = ["Commonwealth", "Batasan Hills", "Holy Spirit", "Payatas", "Bagong Silangan", "Fairview", "Novaliches", "Tandang Sora", "Diliman", "Cubao"];
 const DISEASES = ["Dengue", "COVID-19", "Tuberculosis", "Influenza", "Measles", "Cholera", "Other"];
+
+const REPORT_STATUSES = [
+  "Submitted",
+  "Under BHW Review",
+  "Under Medical Verification",
+  "Verified Case",
+  "Closed",
+] as const;
 
 const BhwCommunityReports = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [disease, setDisease] = useState(DISEASES[0]);
-  const [barangay, setBarangay] = useState(BARANGAYS[0]);
+  const [barangay, setBarangay] = useState(QC_BARANGAYS[0]);
   const [details, setDetails] = useState("");
   const [citizenId, setCitizenId] = useState("");
 
-  const { data: cases = [] } = useQuery({
-    queryKey: ["bhw_disease_cases"],
+  const { data: reports = [] } = useQuery({
+    queryKey: ["bhw_disease_reports"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("surveillance_cases")
+        .from("disease_reports")
         .select("*")
-        .order("case_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(100);
       return data || [];
     },
@@ -37,36 +46,74 @@ const BhwCommunityReports = () => {
 
   const reportMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("surveillance_cases").insert({
+      const { error } = await supabase.from("disease_reports").insert({
         disease,
         patient_location: barangay,
         details: `Citizen ID: ${citizenId || "N/A"} — ${details}`,
         reported_by: user!.id,
         reporter: "BHW Field Report",
-        status: "active",
+        status: "Under BHW Review",
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["bhw_disease_cases"] });
+      queryClient.invalidateQueries({ queryKey: ["bhw_disease_reports"] });
       setDetails("");
       setCitizenId("");
-      toast.success("Disease case reported");
+      toast.success("Disease report submitted for verification");
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("disease_reports").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bhw_disease_reports"] });
+      toast.success("Status updated");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const verifyCaseMutation = useMutation({
+    mutationFn: async (report: { id: string; disease: string; patient_location: string }) => {
+      const coords = QC_BARANGAY_COORDS[report.patient_location] ?? [14.676, 121.0437];
+      const { error: insertError } = await supabase.from("disease_cases").insert({
+        disease_type: report.disease,
+        barangay: report.patient_location,
+        latitude: coords[0],
+        longitude: coords[1],
+        date_reported: new Date().toISOString().slice(0, 10),
+        status: "Reported",
+      });
+      if (insertError) throw insertError;
+      const { error: updateError } = await supabase.from("disease_reports").update({ status: "Verified Case" }).eq("id", report.id);
+      if (updateError) throw updateError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bhw_disease_reports"] });
+      queryClient.invalidateQueries({ queryKey: ["disease_map_cases"] });
+      toast.success("Case verified and added to surveillance map");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const setStatus = (id: string, status: string) => updateStatusMutation.mutate({ id, status });
+  const verifyCase = (r: { id: string; disease: string; patient_location: string }) => verifyCaseMutation.mutate(r);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold font-heading">Community Reports</h1>
-        <p className="text-sm text-muted-foreground">Report suspected disease cases in your barangay</p>
+        <p className="text-sm text-muted-foreground">Review citizen disease reports and verify cases for the Health Surveillance System</p>
       </div>
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-heading flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-primary" /> Report Disease Case
+            <ShieldAlert className="h-4 w-4 text-primary" /> Report Disease Case (BHW)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -83,9 +130,14 @@ const BhwCommunityReports = () => {
             </div>
             <div>
               <Label className="text-xs">Barangay</Label>
-              <select className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs" value={barangay} onChange={(e) => setBarangay(e.target.value)}>
-                {BARANGAYS.map((b) => <option key={b} value={b}>{b}</option>)}
-              </select>
+              <Select value={barangay} onValueChange={setBarangay}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Select barangay" /></SelectTrigger>
+                <SelectContent>
+                  {QC_BARANGAYS.map((b) => (
+                    <SelectItem key={b} value={b}>{b}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div>
@@ -100,11 +152,14 @@ const BhwCommunityReports = () => {
 
       <Card className="glass-card">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-heading">Recent Disease Reports</CardTitle>
+          <CardTitle className="text-sm font-heading">Disease Reports — Verification Workflow</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Submitted → Under BHW Review → Under Medical Verification → Verified Case (appears on map) or Closed
+          </p>
         </CardHeader>
         <CardContent>
-          {cases.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">No disease cases reported.</p>
+          {reports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">No disease reports yet.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -113,15 +168,38 @@ const BhwCommunityReports = () => {
                   <TableHead className="text-xs">Disease</TableHead>
                   <TableHead className="text-xs">Barangay</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cases.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-sm">{c.case_date}</TableCell>
-                    <TableCell className="text-sm">{c.disease}</TableCell>
-                    <TableCell className="text-sm">{c.patient_location || "—"}</TableCell>
-                    <TableCell><StatusBadge status={c.status} /></TableCell>
+                {reports.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-sm">{r.case_date ?? (r.created_at && new Date(r.created_at).toLocaleDateString())}</TableCell>
+                    <TableCell className="text-sm">{r.disease}</TableCell>
+                    <TableCell className="text-sm">{r.patient_location || "—"}</TableCell>
+                    <TableCell><StatusBadge status={r.status} /></TableCell>
+                    <TableCell className="text-xs space-x-1">
+                      {r.status === "Submitted" && (
+                        <Button size="sm" variant="outline" className="h-7 gap-0.5" onClick={() => setStatus(r.id, "Under BHW Review")}>
+                          BHW Review
+                        </Button>
+                      )}
+                      {r.status === "Under BHW Review" && (
+                        <Button size="sm" variant="outline" className="h-7 gap-0.5" onClick={() => setStatus(r.id, "Under Medical Verification")}>
+                          To Health Center
+                        </Button>
+                      )}
+                      {(r.status === "Under Medical Verification" || r.status === "Under BHW Review") && (
+                        <>
+                          <Button size="sm" className="h-7 gap-0.5" onClick={() => verifyCase(r)} disabled={verifyCaseMutation.isPending}>
+                            <CheckCircle className="h-3.5 w-3.5" /> Verify
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-7 gap-0.5 text-destructive" onClick={() => setStatus(r.id, "Closed")}>
+                            <XCircle className="h-3.5 w-3.5" /> Close
+                          </Button>
+                        </>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

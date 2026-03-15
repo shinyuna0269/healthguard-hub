@@ -17,6 +17,15 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
     <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <script>
+      (function() {
+        var k = "healthguard-theme";
+        var s = localStorage.getItem(k);
+        if (s === "dark") document.documentElement.classList.add("dark");
+        else if (s === "light") document.documentElement.classList.remove("dark");
+        else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark");
+      })();
+    </script>
   </head>
 
   <body>

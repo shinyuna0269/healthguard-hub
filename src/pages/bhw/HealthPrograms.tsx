@@ -115,7 +115,8 @@ const BhwHealthPrograms = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Child</TableHead>
+                  <TableHead className="text-xs">Patient Name</TableHead>
+                  <TableHead className="text-xs hidden md:table-cell">Patient Type</TableHead>
                   <TableHead className="text-xs">Vaccine</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
                 </TableRow>
@@ -124,7 +125,8 @@ const BhwHealthPrograms = () => {
                 {vaccinations.map((v) => (
                   <TableRow key={v.id}>
                     <TableCell className="text-sm">{v.vaccination_date}</TableCell>
-                    <TableCell className="text-sm">{v.child_name}</TableCell>
+                    <TableCell className="text-sm">{v.patient_name || v.child_name}</TableCell>
+                    <TableCell className="text-sm hidden md:table-cell">{v.patient_type || "—"}</TableCell>
                     <TableCell className="text-sm">{v.vaccine}</TableCell>
                     <TableCell><StatusBadge status={v.status} /></TableCell>
                   </TableRow>

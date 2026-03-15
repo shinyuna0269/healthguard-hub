@@ -201,7 +201,7 @@ const StaffScanQr = () => {
                         <StatusBadge status={v.status} />
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        {v.child_name} · {v.vaccination_date}
+                        {v.patient_name || v.child_name} · {v.vaccination_date}
                       </p>
                     </div>
                   ))}

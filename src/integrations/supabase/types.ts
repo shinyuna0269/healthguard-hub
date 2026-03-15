@@ -355,6 +355,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sanitation_complaints: {
+        Row: {
+          complaint_id: string
+          citizen_id: string | null
+          complaint_type: string
+          barangay: string
+          description: string | null
+          photo_attachment: string | null
+          status: string
+          assigned_officer: string | null
+          date_submitted: string
+          created_at: string
+        }
+        Insert: {
+          complaint_id?: string
+          citizen_id?: string | null
+          complaint_type: string
+          barangay: string
+          description?: string | null
+          photo_attachment?: string | null
+          status?: string
+          assigned_officer?: string | null
+          date_submitted?: string
+          created_at?: string
+        }
+        Update: {
+          complaint_id?: string
+          citizen_id?: string | null
+          complaint_type?: string
+          barangay?: string
+          description?: string | null
+          photo_attachment?: string | null
+          status?: string
+          assigned_officer?: string | null
+          date_submitted?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       resident_complaints: {
         Row: {
           complaint_date: string
@@ -529,6 +568,45 @@ export type Database = {
         }
         Relationships: []
       }
+      disease_reports: {
+        Row: {
+          id: string
+          disease: string
+          patient_location: string
+          details: string | null
+          reported_by: string | null
+          reporter: string | null
+          status: string
+          case_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          disease: string
+          patient_location: string
+          details?: string | null
+          reported_by?: string | null
+          reporter?: string | null
+          status?: string
+          case_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          disease?: string
+          patient_location?: string
+          details?: string | null
+          reported_by?: string | null
+          reporter?: string | null
+          status?: string
+          case_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       surveillance_cases: {
         Row: {
           case_count: number
@@ -586,6 +664,39 @@ export type Database = {
         }
         Relationships: []
       }
+      vaccination_schedules: {
+        Row: {
+          id: string
+          barangay: string
+          vaccine: string
+          health_center_location: string | null
+          assigned_bhw: string | null
+          schedule_date: string
+          schedule_time: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          barangay: string
+          vaccine: string
+          health_center_location?: string | null
+          assigned_bhw?: string | null
+          schedule_date: string
+          schedule_time?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          barangay?: string
+          vaccine?: string
+          health_center_location?: string | null
+          assigned_bhw?: string | null
+          schedule_date?: string
+          schedule_time?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       vaccinations: {
         Row: {
           age: string | null
@@ -597,17 +708,21 @@ export type Database = {
           status: string
           vaccination_date: string
           vaccine: string
+          patient_name: string | null
+          patient_type: string | null
         }
         Insert: {
           age?: string | null
           bhw_name?: string | null
-          child_name: string
+          child_name?: string
           created_at?: string
           id?: string
           recorded_by?: string | null
           status?: string
           vaccination_date?: string
           vaccine: string
+          patient_name?: string | null
+          patient_type?: string | null
         }
         Update: {
           age?: string | null
@@ -619,6 +734,8 @@ export type Database = {
           status?: string
           vaccination_date?: string
           vaccine?: string
+          patient_name?: string | null
+          patient_type?: string | null
         }
         Relationships: []
       }

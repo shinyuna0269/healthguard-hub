@@ -38,7 +38,7 @@ const createIcon = (color: string) =>
     iconAnchor: [7, 7],
   });
 
-// Quezon City barangay coordinates
+// Verified cases from disease_cases have lat/long; fallback for legacy or display
 const BARANGAY_COORDS: Record<string, [number, number]> = {
   "Commonwealth": [14.6994, 121.0867],
   "Batasan Hills": [14.6819, 121.0968],
@@ -55,12 +55,18 @@ const BARANGAY_COORDS: Record<string, [number, number]> = {
 };
 
 interface DiseaseCase {
-  id: string;
-  disease: string;
+  case_id?: string;
+  id?: string;
+  disease_type?: string;
+  disease?: string;
+  barangay?: string | null;
+  patient_location?: string | null;
+  latitude?: number;
+  longitude?: number;
+  date_reported?: string;
+  case_date?: string;
   status: string;
-  case_date: string;
-  patient_location: string | null;
-  case_count: number;
+  case_count?: number;
 }
 
 // Extract QC polygon coordinates from GeoJSON
@@ -97,9 +103,9 @@ const DiseaseMapDashboard = () => {
     queryKey: ["disease_map_cases"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("surveillance_cases")
+        .from("disease_cases")
         .select("*")
-        .order("case_date", { ascending: false })
+        .order("date_reported", { ascending: false })
         .limit(500);
       if (error) throw error;
       return (data || []) as DiseaseCase[];
@@ -107,25 +113,30 @@ const DiseaseMapDashboard = () => {
     refetchInterval: 15000,
   });
 
-  const diseases = useMemo(() => [...new Set(cases.map((c) => c.disease))].filter(Boolean), [cases]);
-  const barangays = useMemo(() => [...new Set(cases.map((c) => c.patient_location).filter(Boolean))], [cases]);
+  const diseaseName = (c: DiseaseCase) => c.disease_type ?? c.disease ?? "";
+  const locationName = (c: DiseaseCase) => c.barangay ?? c.patient_location ?? "";
+  const caseDate = (c: DiseaseCase) => c.date_reported ?? c.case_date ?? "";
+
+  const diseases = useMemo(() => [...new Set(cases.map(diseaseName).filter(Boolean))], [cases]);
+  const barangays = useMemo(() => [...new Set(cases.map(locationName).filter(Boolean))], [cases]);
   const statuses = useMemo(() => [...new Set(cases.map((c) => c.status))], [cases]);
 
   const filtered = useMemo(() => {
     return cases.filter((c) => {
-      if (filterBarangay && c.patient_location !== filterBarangay) return false;
-      if (filterDisease && c.disease !== filterDisease) return false;
+      if (filterBarangay && locationName(c) !== filterBarangay) return false;
+      if (filterDisease && diseaseName(c) !== filterDisease) return false;
       if (filterStatus && c.status !== filterStatus) return false;
-      if (dateFrom && c.case_date < dateFrom) return false;
-      if (dateTo && c.case_date > dateTo) return false;
+      const d = caseDate(c);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
       return true;
     });
   }, [cases, filterBarangay, filterDisease, filterStatus, dateFrom, dateTo]);
 
-  // Summary stats
+  // Summary stats (verified cases on map)
   const { totalCases, activeCases } = useMemo(() => {
-    let total = cases.reduce((sum, c) => sum + (c.case_count || 0), 0);
-    let activeCount = cases.filter((c) => !["resolved", "completed"].includes(c.status.toLowerCase())).length;
+    const total = cases.length;
+    const activeCount = cases.filter((c) => !["resolved", "completed"].includes((c.status || "").toLowerCase())).length;
     return { totalCases: total, activeCases: activeCount };
   }, [cases]);
 
@@ -204,19 +215,20 @@ const DiseaseMapDashboard = () => {
     clusterRef.current = cluster;
 
     filtered.forEach((c) => {
-      const loc = c.patient_location || "";
-      const coords = loc ? BARANGAY_COORDS[loc] : undefined;
+      const lat = c.latitude;
+      const lng = c.longitude;
+      const coords: [number, number] | undefined =
+        lat != null && lng != null ? [lat, lng] : BARANGAY_COORDS[locationName(c)];
       if (!coords) return;
 
       const color = getMarkerColor(c.status);
       const marker = L.marker([coords[0], coords[1]], { icon: createIcon(color) });
       marker.bindPopup(
         `<div style="font-size:13px;line-height:1.5">
-          <strong>${c.disease}</strong><br/>
-          <b>Barangay:</b> ${loc}<br/>
+          <strong>${diseaseName(c)}</strong><br/>
+          <b>Barangay:</b> ${locationName(c)}<br/>
           <b>Status:</b> <span style="color:${color};font-weight:600">${c.status}</span><br/>
-          <b>Date:</b> ${c.case_date}<br/>
-          <b>Cases:</b> ${c.case_count}
+          <b>Date:</b> ${caseDate(c)}
         </div>`,
       );
       cluster.addLayer(marker);
@@ -350,9 +362,9 @@ const DiseaseMapDashboard = () => {
                     <div key={c.id} className="p-2 rounded-lg border border-border bg-muted/20 flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full shrink-0" style={{ background: color }} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium truncate">{c.disease}</p>
+                        <p className="text-xs font-medium truncate">{diseaseName(c)}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {c.patient_location || "Unknown"} · {c.case_date} · {c.status}
+                          {locationName(c) || "Unknown"} · {caseDate(c)} · {c.status}
                         </p>
                       </div>
                       <span className="text-[11px] text-muted-foreground shrink-0">

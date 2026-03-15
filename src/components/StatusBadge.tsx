@@ -103,6 +103,28 @@ const statusMap: Record<
     className:
       "bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700/40 dark:text-gray-100 dark:border-gray-500/60",
   },
+
+  // Disease report verification workflow
+  "under bhw review": {
+    variant: "secondary",
+    className:
+      "bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-100 dark:border-amber-500/40",
+  },
+  "under medical verification": {
+    variant: "secondary",
+    className:
+      "bg-violet-100 text-violet-800 border border-violet-200 dark:bg-violet-500/20 dark:text-violet-100 dark:border-violet-500/40",
+  },
+  "verified case": {
+    variant: "default",
+    className:
+      "bg-emerald-500 text-emerald-50 border border-emerald-600 dark:bg-emerald-400 dark:text-slate-950 dark:border-emerald-500",
+  },
+  closed: {
+    variant: "outline",
+    className:
+      "bg-gray-100 text-gray-700 border border-gray-300 dark:bg-gray-700/40 dark:text-gray-100 dark:border-gray-500/60",
+  },
 };
 
 const StatusBadge = ({ status, className }: StatusBadgeProps) => {
