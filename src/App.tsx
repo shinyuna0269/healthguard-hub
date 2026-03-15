@@ -73,19 +73,40 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+const getDashboardPath = (role) => {
+  switch (role) {
+    case "Citizen_User":
+    case "BusinessOwner_User":
+      return "/citizen/dashboard";
+    case "BHW_User":
+      return "/bhw/dashboard";
+    case "Clerk_User":
+      return "/staff/dashboard";
+    case "BSI_User":
+      return "/staff/inspector-dashboard";
+    case "Captain_User":
+      return "/staff/city-health-officer-dashboard";
+    case "LGUAdmin_User":
+      return "/admin/dashboard";
+    case "SysAdmin_User":
+      return "/sys/dashboard";
+    default:
+      return "/dashboard";
+  }
+};
+
 const RoleDashboard = () => {
   const { currentRole } = useAuth();
-  const isCitizen = currentRole === "Citizen_User" || currentRole === "BusinessOwner_User";
-
-  if (isCitizen) return <CitizenDashboard />;
-  if (currentRole === "BHW_User") return <BhwDashboard />;
-  if (currentRole === "Clerk_User") return <HealthCenterDashboard />;
-  if (currentRole === "BSI_User") return <InspectorDashboard />;
-  if (currentRole === "Captain_User") return <CityHealthOfficerDashboard />;
-  if (currentRole === "LGUAdmin_User") return <LguAdminDashboard />;
-  if (currentRole === "SysAdmin_User") return <SystemAdminDashboard />;
-
-  return <Dashboard />;
+  const navigate = useNavigate();
+  useEffect(() => {
+    const path = getDashboardPath(currentRole);
+    navigate(path, { replace: true });
+  }, [currentRole, navigate]);
+  return null;
 };
 
 const App = () => (
@@ -98,7 +119,16 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              {/* Root: always redirect to correct dashboard */}
               <Route path="/" element={<RoleDashboard />} />
+              {/* Role-based dashboards */}
+              <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
+              <Route path="/bhw/dashboard" element={<BhwDashboard />} />
+              <Route path="/staff/dashboard" element={<HealthCenterDashboard />} />
+              <Route path="/staff/inspector-dashboard" element={<InspectorDashboard />} />
+              <Route path="/staff/city-health-officer-dashboard" element={<CityHealthOfficerDashboard />} />
+              <Route path="/admin/dashboard" element={<LguAdminDashboard />} />
+              <Route path="/sys/dashboard" element={<SystemAdminDashboard />} />
               {/* Core module routes */}
               <Route path="/health-center" element={<HealthCenterServices />} />
               <Route path="/sanitation-permit" element={<SanitationPermit />} />
