@@ -70,7 +70,7 @@ const SanitationPermit = () => {
   const { data: inspectionsList = [] } = useQuery({
     queryKey: ["sanitary_inspections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("sanitary_inspections").select("*").order("scheduled_date", { ascending: false });
+      const { data, error } = await (supabase as any).from("sanitary_inspections").select("*").order("scheduled_date", { ascending: false });
       if (error) throw error;
       return data;
     },
