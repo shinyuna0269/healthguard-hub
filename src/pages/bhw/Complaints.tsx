@@ -17,8 +17,8 @@ import { QC_BARANGAYS, SANITATION_COMPLAINT_TYPES } from "@/lib/constants";
 const BhwComplaints = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [complaintType, setComplaintType] = useState(SANITATION_COMPLAINT_TYPES[0]);
-  const [barangay, setBarangay] = useState(QC_BARANGAYS[0]);
+  const [complaintType, setComplaintType] = useState<string>(SANITATION_COMPLAINT_TYPES[0]);
+  const [barangay, setBarangay] = useState<string>(QC_BARANGAYS[0]);
   const [description, setDescription] = useState("");
 
   const { data: complaints = [] } = useQuery({

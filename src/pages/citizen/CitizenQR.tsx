@@ -83,18 +83,18 @@ const CitizenQR = () => {
   const fullName = isCitizenRealm && profile
     ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || userName || "—"
     : hsmProfile?.full_name || userName || "—";
-  const email = (isCitizenRealm ? user?.email : hsmProfile?.email) || user?.email || "—";
+  const email = (isCitizenRealm ? user?.email : (hsmProfile as any)?.email) || user?.email || "—";
   const dateOfBirth = isCitizenRealm && profile
     ? formatDate((profile as any).birthdate)
-    : formatDate(hsmProfile?.date_of_birth);
-  const gender = isCitizenRealm ? ((profile as any).gender ?? "—") : (hsmProfile?.gender ?? "—");
-  const address = isCitizenRealm && profile ? ((profile as any).address ?? "—") : (hsmProfile?.address ?? "—");
+    : "—";
+  const gender = isCitizenRealm ? ((profile as any).gender ?? "—") : "—";
+  const address = isCitizenRealm && profile ? ((profile as any).address ?? "—") : "—";
   const barangay = isCitizenRealm && profile ? ((profile as any).barangay ?? "—") : "—";
   const cityMunicipality = isCitizenRealm && profile ? ((profile as any).city_municipality ?? "—") : "—";
   const zipCode = isCitizenRealm && profile ? ((profile as any).zip_code ?? "—") : "—";
   const contactNumber = isCitizenRealm && profile
     ? ((profile as any).contact_number ?? "—")
-    : (hsmProfile?.contact_number ?? "—");
+    : "—";
 
   const handleDownload = useCallback(() => {
     const svgEl = qrRef.current?.querySelector("svg");

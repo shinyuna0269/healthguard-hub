@@ -275,7 +275,7 @@ const Complaints = () => {
                   >
                     <TableCell className="text-sm">{c.date_submitted}</TableCell>
                     <TableCell className="text-sm">{c.complaint_type}</TableCell>
-                    <TableCell className="text-sm">{c.location ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{c.barangay ?? "—"}</TableCell>
                     <TableCell className="text-sm">{c.barangay}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />

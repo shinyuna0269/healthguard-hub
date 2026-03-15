@@ -103,9 +103,9 @@ const DiseaseMapDashboard = () => {
     queryKey: ["disease_map_cases"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("disease_cases")
+        .from("surveillance_cases")
         .select("*")
-        .order("date_reported", { ascending: false })
+        .order("case_date", { ascending: false })
         .limit(500);
       if (error) throw error;
       return (data || []) as DiseaseCase[];
