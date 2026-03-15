@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,10 +7,11 @@ import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Syringe, Calendar, CheckCircle, Clock, XCircle } from "lucide-react";
+import { Syringe, Calendar, CheckCircle, Clock, XCircle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DateInputWithCalendar } from "@/components/DateInputWithCalendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
@@ -24,6 +25,7 @@ const VaccinationNutrition = () => {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     patient_name: "",
     patient_type: "Child",
@@ -89,6 +91,18 @@ const VaccinationNutrition = () => {
   const pending = vaccinations.filter((v) => (v.status || "").toLowerCase() === "pending");
   const cancelled = vaccinations.filter((v) => (v.status || "").toLowerCase() === "cancelled");
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return vaccinations;
+    const name = (v: any) => (v.patient_name || v.child_name || "").toLowerCase();
+    return vaccinations.filter(
+      (v) =>
+        name(v).includes(q) ||
+        (v.vaccine || "").toLowerCase().includes(q) ||
+        (v.status || "").toLowerCase().includes(q)
+    );
+  }, [vaccinations, search]);
+
   const displayName = (v: any) => v.patient_name || v.child_name || "—";
   const displayType = (v: any) => v.patient_type || "—";
 
@@ -126,7 +140,10 @@ const VaccinationNutrition = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label className="text-xs">Preferred Date</Label><Input type="date" value={form.vaccination_date} onChange={(e) => setForm({ ...form, vaccination_date: e.target.value })} /></div>
+              <div>
+                <Label className="text-xs">Preferred Date</Label>
+                <DateInputWithCalendar value={form.vaccination_date} onChange={(e) => setForm({ ...form, vaccination_date: e.target.value })} className="mt-1" />
+              </div>
               <div><Label className="text-xs">Notes (optional)</Label><Textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
               <Button className="w-full" onClick={() => requestMutation.mutate()} disabled={requestMutation.isPending || !form.patient_name || !form.vaccine}>
                 {requestMutation.isPending ? "Submitting..." : "Submit Vaccination Request"}
@@ -221,9 +238,14 @@ const VaccinationNutrition = () => {
       )}
 
       <Card className="glass-card">
-        <CardHeader><CardTitle className="text-sm font-heading">Vaccination Records</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name, vaccine, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          </div>
+        </CardHeader>
         <CardContent>
-          {vaccinations.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">No vaccination records found.</p>
           ) : (
             <Table>
@@ -238,7 +260,7 @@ const VaccinationNutrition = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vaccinations.map((v) => (
+                {filtered.map((v) => (
                   <TableRow key={v.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(v); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{v.vaccination_date}</TableCell>
                     <TableCell className="text-sm">{v.vaccine}</TableCell>

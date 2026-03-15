@@ -1,18 +1,20 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "@/components/StatusBadge";
 import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Award, Download } from "lucide-react";
+import { Award, Download, Search } from "lucide-react";
 
 const Certificates = () => {
   const { user } = useAuth();
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [search, setSearch] = useState("");
 
   const { data: certificates = [] } = useQuery({
     queryKey: ["citizen_certificates", user?.id],
@@ -23,6 +25,17 @@ const Certificates = () => {
     },
     enabled: !!user,
   });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return certificates;
+    return certificates.filter(
+      (c) =>
+        (c.certificate_number || "").toLowerCase().includes(q) ||
+        (c.certificate_type || "").toLowerCase().includes(q) ||
+        (c.status || "").toLowerCase().includes(q)
+    );
+  }, [certificates, search]);
 
   return (
     <div className="space-y-6">
@@ -48,9 +61,14 @@ const Certificates = () => {
       )}
 
       <Card className="glass-card">
-        <CardHeader><CardTitle className="text-sm font-heading">My Certificates</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by certificate #, type, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          </div>
+        </CardHeader>
         <CardContent>
-          {certificates.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-8">
               <Award className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No certificates issued yet.</p>
@@ -68,7 +86,7 @@ const Certificates = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {certificates.map(c => (
+                {filtered.map(c => (
                   <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(c); setDetailOpen(true); }}>
                     <TableCell className="font-mono text-sm">{c.certificate_number || "—"}</TableCell>
                     <TableCell className="text-sm">{c.certificate_type}</TableCell>

@@ -18,7 +18,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   BHW_User: "Barangay Health Worker",
   BSI_User: "Sanitary Inspector",
   Clerk_User: "Health Center Staff",
-  Captain_User: "Municipal Health Officer",
+  Captain_User: "City Health Officer",
   LGUAdmin_User: "LGU Admin",
   SysAdmin_User: "System Administrator",
 };

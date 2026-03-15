@@ -118,7 +118,7 @@ const HealthServices = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold font-heading">Health Services</h1>
-          <p className="text-sm text-muted-foreground">View your health records and request consultations</p>
+          <p className="text-sm text-muted-foreground">Quezon City Health Center services — view your records and request consultations</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -137,6 +137,44 @@ const HealthServices = () => {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
+
+      {/* Quezon City Health Center – services offered */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="glass-card">
+          <CardHeader><CardTitle className="text-sm font-heading">Primary Health Services</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-1">
+            <p>• Medical Consultations</p>
+            <p>• Laboratory Tests</p>
+            <p>• Dental Services</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardHeader><CardTitle className="text-sm font-heading">Preventive Programs</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-1">
+            <p>• Family Planning</p>
+            <p>• Cancer Screening</p>
+            <p>• TB Screening</p>
+            <p>• HIV Testing</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardHeader><CardTitle className="text-sm font-heading">Specialized Services</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-1">
+            <p>• Mental Health Support</p>
+            <p>• Gender-Inclusive Health Services</p>
+            <p>• Nutrition Counseling</p>
+          </CardContent>
+        </Card>
+        <Card className="glass-card">
+          <CardHeader><CardTitle className="text-sm font-heading">Senior & PWD Benefits</CardTitle></CardHeader>
+          <CardContent className="text-sm text-muted-foreground space-y-1">
+            <p>• Free maintenance medicines</p>
+            <p>• Priority consultation lanes</p>
+            <p>• PhilHealth enrollment assistance</p>
+            <p>• Medical social services referral</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs value={selectedTab} onValueChange={(v) => setSelectedTab(v as RecordType)} className="space-y-4">

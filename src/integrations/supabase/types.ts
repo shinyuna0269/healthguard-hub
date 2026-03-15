@@ -180,6 +180,32 @@ export type Database = {
         }
         Relationships: []
       }
+      establishment_notifications: {
+        Row: {
+          id: string
+          establishment_id: string
+          notified_at: string
+          read_by_clerk: boolean
+          read_by_bsi: boolean
+        }
+        Insert: {
+          id?: string
+          establishment_id: string
+          notified_at?: string
+          read_by_clerk?: boolean
+          read_by_bsi?: boolean
+        }
+        Update: {
+          id?: string
+          establishment_id?: string
+          notified_at?: string
+          read_by_clerk?: boolean
+          read_by_bsi?: boolean
+        }
+        Relationships: [
+          { foreignKeyName: "establishment_notifications_establishment_id_fkey", columns: ["establishment_id"], isOneToOne: false, referencedRelation: "establishments", referencedColumns: ["id"] },
+        ]
+      }
       inspections: {
         Row: {
           checklist: Json | null
@@ -293,6 +319,7 @@ export type Database = {
           paid_at: string | null
           payment_type: string
           reference_number: string | null
+          sanitary_application_id: string | null
           status: string
           user_id: string
         }
@@ -304,6 +331,7 @@ export type Database = {
           paid_at?: string | null
           payment_type: string
           reference_number?: string | null
+          sanitary_application_id?: string | null
           status?: string
           user_id: string
         }
@@ -315,6 +343,7 @@ export type Database = {
           paid_at?: string | null
           payment_type?: string
           reference_number?: string | null
+          sanitary_application_id?: string | null
           status?: string
           user_id?: string
         }
@@ -324,6 +353,13 @@ export type Database = {
             columns: ["establishment_id"]
             isOneToOne: false
             referencedRelation: "establishments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_sanitary_application_id_fkey"
+            columns: ["sanitary_application_id"]
+            isOneToOne: false
+            referencedRelation: "sanitary_permit_applications"
             referencedColumns: ["id"]
           },
         ]
@@ -489,6 +525,155 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      sanitary_permit_applications: {
+        Row: {
+          id: string
+          establishment_id: string
+          user_id: string
+          establishment_name: string
+          business_type: string | null
+          address: string | null
+          barangay: string | null
+          owner_name: string
+          contact_number: string | null
+          health_certificates_url: string | null
+          water_analysis_url: string | null
+          pest_control_url: string | null
+          business_permit_url: string | null
+          valid_id_url: string | null
+          status: string
+          order_of_payment_number: string | null
+          payment_id: string | null
+          is_provisional: boolean
+          assigned_inspector_id: string | null
+          inspection_scheduled_date: string | null
+          inspection_notes: string | null
+          permit_number: string | null
+          permit_issued_at: string | null
+          permit_expiry_date: string | null
+          correction_notes: string | null
+          reinspection_proof_url: string | null
+          reinspection_requested_at: string | null
+          applied_at: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          establishment_id: string
+          user_id: string
+          establishment_name: string
+          business_type?: string | null
+          address?: string | null
+          barangay?: string | null
+          owner_name: string
+          contact_number?: string | null
+          health_certificates_url?: string | null
+          water_analysis_url?: string | null
+          pest_control_url?: string | null
+          business_permit_url?: string | null
+          valid_id_url?: string | null
+          status?: string
+          order_of_payment_number?: string | null
+          payment_id?: string | null
+          is_provisional?: boolean
+          assigned_inspector_id?: string | null
+          inspection_scheduled_date?: string | null
+          inspection_notes?: string | null
+          permit_number?: string | null
+          permit_issued_at?: string | null
+          permit_expiry_date?: string | null
+          correction_notes?: string | null
+          reinspection_proof_url?: string | null
+          reinspection_requested_at?: string | null
+          applied_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          establishment_id?: string
+          user_id?: string
+          establishment_name?: string
+          business_type?: string | null
+          address?: string | null
+          barangay?: string | null
+          owner_name?: string
+          contact_number?: string | null
+          health_certificates_url?: string | null
+          water_analysis_url?: string | null
+          pest_control_url?: string | null
+          business_permit_url?: string | null
+          valid_id_url?: string | null
+          status?: string
+          order_of_payment_number?: string | null
+          payment_id?: string | null
+          is_provisional?: boolean
+          assigned_inspector_id?: string | null
+          inspection_scheduled_date?: string | null
+          inspection_notes?: string | null
+          permit_number?: string | null
+          permit_issued_at?: string | null
+          permit_expiry_date?: string | null
+          correction_notes?: string | null
+          reinspection_proof_url?: string | null
+          reinspection_requested_at?: string | null
+          applied_at?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "sanitary_permit_applications_establishment_id_fkey", columns: ["establishment_id"], isOneToOne: false, referencedRelation: "establishments", referencedColumns: ["id"] },
+          { foreignKeyName: "sanitary_permit_applications_payment_id_fkey", columns: ["payment_id"], isOneToOne: false, referencedRelation: "payments", referencedColumns: ["id"] },
+        ]
+      }
+      sanitary_inspections: {
+        Row: {
+          id: string
+          application_id: string
+          inspector_id: string | null
+          scheduled_date: string | null
+          status: string
+          result: string | null
+          checklist: Json | null
+          findings: string | null
+          correction_required_notes: string | null
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          application_id: string
+          inspector_id?: string | null
+          scheduled_date?: string | null
+          status?: string
+          result?: string | null
+          checklist?: Json | null
+          findings?: string | null
+          correction_required_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          application_id?: string
+          inspector_id?: string | null
+          scheduled_date?: string | null
+          status?: string
+          result?: string | null
+          checklist?: Json | null
+          findings?: string | null
+          correction_required_notes?: string | null
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: "sanitary_inspections_application_id_fkey", columns: ["application_id"], isOneToOne: false, referencedRelation: "sanitary_permit_applications", referencedColumns: ["id"] },
+        ]
       }
       sanitation_permits: {
         Row: {
@@ -736,6 +921,189 @@ export type Database = {
           vaccine?: string
           patient_name?: string | null
           patient_type?: string | null
+        }
+        Relationships: []
+      }
+      septic_desludging_requests: {
+        Row: {
+          id: string
+          user_id: string
+          property_address: string
+          barangay: string
+          preferred_date: string | null
+          property_details_url: string | null
+          status: string
+          reference_number: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          property_address: string
+          barangay: string
+          preferred_date?: string | null
+          property_details_url?: string | null
+          status?: string
+          reference_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          property_address?: string
+          barangay?: string
+          preferred_date?: string | null
+          property_details_url?: string | null
+          status?: string
+          reference_number?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      citizen_wastewater_complaints: {
+        Row: {
+          id: string
+          user_id: string
+          complaint_type: string
+          location: string
+          description: string | null
+          photo_url: string | null
+          barangay: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          complaint_type: string
+          location: string
+          description?: string | null
+          photo_url?: string | null
+          barangay: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          complaint_type?: string
+          location?: string
+          description?: string | null
+          photo_url?: string | null
+          barangay?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      waterway_cleanup_reports: {
+        Row: {
+          id: string
+          user_id: string
+          report_type: string
+          location: string
+          description: string | null
+          photo_url: string | null
+          barangay: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          report_type: string
+          location: string
+          description?: string | null
+          photo_url?: string | null
+          barangay: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          report_type?: string
+          location?: string
+          description?: string | null
+          photo_url?: string | null
+          barangay?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      environmental_compliance_requests: {
+        Row: {
+          id: string
+          user_id: string
+          business_name: string
+          request_type: string
+          address: string | null
+          barangay: string | null
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          business_name: string
+          request_type: string
+          address?: string | null
+          barangay?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          business_name?: string
+          request_type?: string
+          address?: string | null
+          barangay?: string | null
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      desludging_schedules: {
+        Row: {
+          id: string
+          barangay: string
+          schedule_date: string
+          schedule_time: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          barangay: string
+          schedule_date: string
+          schedule_time?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          barangay?: string
+          schedule_date?: string
+          schedule_time?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }

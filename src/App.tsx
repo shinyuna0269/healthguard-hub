@@ -54,6 +54,11 @@ import InspectionStatus from "@/pages/citizen/InspectionStatus";
 import Certificates from "@/pages/citizen/Certificates";
 import Payments from "@/pages/citizen/Payments";
 import ServiceRequests from "@/pages/citizen/ServiceRequests";
+import SepticDesludging from "@/pages/citizen/SepticDesludging";
+import WastewaterComplaint from "@/pages/citizen/WastewaterComplaint";
+import WaterwayCleanupReport from "@/pages/citizen/WaterwayCleanupReport";
+import EnvironmentalComplianceRequest from "@/pages/citizen/EnvironmentalComplianceRequest";
+import DesludgingScheduleViewer from "@/pages/citizen/DesludgingScheduleViewer";
 
 const queryClient = new QueryClient();
 
@@ -146,6 +151,11 @@ const App = () => (
               <Route path="/citizen/certificates" element={<Certificates />} />
               <Route path="/citizen/payments" element={<Payments />} />
               <Route path="/citizen/requests" element={<ServiceRequests />} />
+              <Route path="/citizen/septic-desludging" element={<SepticDesludging />} />
+              <Route path="/citizen/wastewater-complaint" element={<WastewaterComplaint />} />
+              <Route path="/citizen/waterway-cleanup" element={<WaterwayCleanupReport />} />
+              <Route path="/citizen/environmental-compliance" element={<EnvironmentalComplianceRequest />} />
+              <Route path="/citizen/desludging-schedule" element={<DesludgingScheduleViewer />} />
               <Route path="/settings" element={<SettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />

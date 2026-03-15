@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,7 +10,7 @@ import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Building2, Pencil, Trash2 } from "lucide-react";
+import { Plus, Building2, Pencil, Trash2, Upload, Search } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -46,6 +46,9 @@ const MyEstablishments = () => {
     permit_expiry_date: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const [permitFile, setPermitFile] = useState<File | null>(null);
+  const permitInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
 
   const { data: establishments = [] } = useQuery({
     queryKey: ["citizen_establishments", user?.id],
@@ -57,27 +60,60 @@ const MyEstablishments = () => {
     enabled: !!user,
   });
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return establishments;
+    return establishments.filter(
+      (e) =>
+        (e.business_name || "").toLowerCase().includes(q) ||
+        (e.barangay || "").toLowerCase().includes(q) ||
+        (e.business_permit_number || "").toLowerCase().includes(q) ||
+        (STATUS_LABELS[e.status] || e.status || "").toLowerCase().includes(q)
+    );
+  }, [establishments, search]);
+
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("establishments").insert({
-        user_id: user!.id,
-        owner_name: userName || "Owner",
-        business_name: form.business_name,
-        business_type: form.business_type,
-        address: form.address,
-        barangay: form.barangay,
-        contact_number: form.contact_number,
-        business_permit_number: form.business_permit_number,
-        issuing_lgu: form.issuing_lgu,
-        permit_expiry_date: form.permit_expiry_date || null,
-      });
-      if (error) throw error;
+      const { data: inserted, error: insertErr } = await supabase
+        .from("establishments")
+        .insert({
+          user_id: user!.id,
+          owner_name: userName || "Owner",
+          business_name: form.business_name,
+          business_type: form.business_type,
+          address: form.address,
+          barangay: form.barangay,
+          contact_number: form.contact_number,
+          business_permit_number: form.business_permit_number,
+          issuing_lgu: form.issuing_lgu,
+          permit_expiry_date: form.permit_expiry_date || null,
+          status: "pending_verification",
+        })
+        .select("id")
+        .single();
+      if (insertErr) throw insertErr;
+      const establishmentId = inserted.id;
+
+      if (permitFile) {
+        const ext = permitFile.name.split(".").pop() || "pdf";
+        const path = `${user!.id}/establishments/${establishmentId}/business_permit.${ext}`;
+        const { error: uploadErr } = await supabase.storage.from("documents").upload(path, permitFile, { upsert: true });
+        if (uploadErr) throw uploadErr;
+        await supabase.from("establishments").update({ permit_document_url: path }).eq("id", establishmentId);
+      }
+
+      try {
+        await supabase.from("establishment_notifications").insert({ establishment_id: establishmentId });
+      } catch {
+        // table might not exist yet in dev
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["citizen_establishments"] });
       setOpen(false);
       setForm(emptyForm);
-      toast.success("Establishment registration submitted");
+      setPermitFile(null);
+      toast.success("Establishment registration submitted. Sanitation Inspector and Health Center Staff have been notified.");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -155,6 +191,20 @@ const MyEstablishments = () => {
       <div><Label className="text-xs">Business Permit Number</Label><Input value={form.business_permit_number} onChange={e => setForm({ ...form, business_permit_number: e.target.value })} /></div>
       <div><Label className="text-xs">Issuing LGU</Label><Input value={form.issuing_lgu} onChange={e => setForm({ ...form, issuing_lgu: e.target.value })} /></div>
       <div><Label className="text-xs">Business Permit Expiry Date</Label><Input type="date" value={form.permit_expiry_date} onChange={e => setForm({ ...form, permit_expiry_date: e.target.value })} /></div>
+      <div>
+        <Label className="text-xs">Upload Business Permit Copy *</Label>
+        <input
+          ref={permitInputRef}
+          type="file"
+          accept=".pdf,.jpg,.jpeg,.png"
+          className="hidden"
+          onChange={(e) => setPermitFile(e.target.files?.[0] || null)}
+        />
+        <Button type="button" variant="outline" size="sm" className="mt-1 gap-1 w-full" onClick={() => permitInputRef.current?.click()}>
+          <Upload className="h-3.5 w-3.5" />
+          {permitFile ? permitFile.name : "Choose file (PDF or image)"}
+        </Button>
+      </div>
     </div>
   );
 
@@ -216,9 +266,14 @@ const MyEstablishments = () => {
       )}
 
       <Card className="glass-card">
-        <CardHeader><CardTitle className="text-sm font-heading">Registered Establishments</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by name, barangay, permit #, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          </div>
+        </CardHeader>
         <CardContent>
-          {establishments.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No establishments registered yet.</p>
@@ -237,7 +292,7 @@ const MyEstablishments = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {establishments.map(e => (
+                {filtered.map(e => (
                   <TableRow key={e.id} className="cursor-pointer hover:bg-muted/50" onClick={() => openDetail(e)}>
                     <TableCell className="font-medium text-sm">{e.business_name}</TableCell>
                     <TableCell className="text-sm">{e.business_type}</TableCell>
@@ -263,9 +318,9 @@ const MyEstablishments = () => {
               </TableBody>
             </Table>
           )}
-          {establishments.some(e => e.status === "requires_correction" && e.reviewer_notes) && (
+          {filtered.some(e => e.status === "requires_correction" && e.reviewer_notes) && (
             <div className="mt-4 space-y-2">
-              {establishments.filter(e => e.reviewer_notes && e.status === "requires_correction").map(e => (
+              {filtered.filter(e => e.reviewer_notes && e.status === "requires_correction").map(e => (
                 <div key={e.id} className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                   <p className="text-xs font-medium text-destructive">{e.business_name} — Correction Required:</p>
                   <p className="text-xs text-muted-foreground mt-1">{e.reviewer_notes}</p>

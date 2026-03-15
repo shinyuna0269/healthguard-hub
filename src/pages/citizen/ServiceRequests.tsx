@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import StatusBadge from "@/components/StatusBadge";
 import RecordDetailModal from "@/components/RecordDetailModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { FileText } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 
 const ServiceRequests = () => {
   const { user } = useAuth();
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [search, setSearch] = useState("");
 
   const { data: requests = [] } = useQuery({
     queryKey: ["citizen_service_requests", user?.id],
@@ -22,6 +24,18 @@ const ServiceRequests = () => {
     },
     enabled: !!user,
   });
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return requests;
+    return requests.filter(
+      (r) =>
+        (r.title || "").toLowerCase().includes(q) ||
+        (r.request_type || "").toLowerCase().includes(q) ||
+        (r.description || "").toLowerCase().includes(q) ||
+        (r.status || "").toLowerCase().includes(q)
+    );
+  }, [requests, search]);
 
   return (
     <div className="space-y-6">
@@ -47,9 +61,14 @@ const ServiceRequests = () => {
       )}
 
       <Card className="glass-card">
-        <CardHeader><CardTitle className="text-sm font-heading">All Requests</CardTitle></CardHeader>
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search by title, type, description, or status..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-md" />
+          </div>
+        </CardHeader>
         <CardContent>
-          {requests.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
               <p className="text-sm text-muted-foreground">No service requests found.</p>
@@ -67,7 +86,7 @@ const ServiceRequests = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {requests.map(r => (
+                {filtered.map(r => (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedRecord(r); setDetailOpen(true); }}>
                     <TableCell className="text-sm">{new Date(r.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm">{r.request_type}</TableCell>

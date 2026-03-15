@@ -23,6 +23,8 @@ import {
   CalendarDays,
   Users,
   PlugZap,
+  Waves,
+  Leaf,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth, type UserRole } from "@/contexts/AuthContext";
@@ -50,7 +52,7 @@ interface NavSection {
   showIf?: (role: UserRole, hasRegistered: boolean) => boolean;
 }
 
-// Citizen navigation sections
+// Citizen navigation sections (reorganized with section labels)
 const citizenSections: NavSection[] = [
   {
     label: "Main",
@@ -65,7 +67,6 @@ const citizenSections: NavSection[] = [
       { title: "Health Services", url: "/citizen/health", icon: HeartPulse },
       { title: "Vaccination & Nutrition", url: "/citizen/vaccination", icon: Syringe },
       { title: "Disease Reporting", url: "/citizen/disease-reporting", icon: ShieldAlert },
-      { title: "Sanitation Complaints", url: "/citizen/sanitation-complaints", icon: MessageSquare },
       { title: "My Establishments", url: "/citizen/establishments", icon: Building2 },
     ],
   },
@@ -77,6 +78,17 @@ const citizenSections: NavSection[] = [
       { title: "Inspection Status", url: "/citizen/inspections", icon: Search },
       { title: "Certificates", url: "/citizen/certificates", icon: Award },
       { title: "Payments", url: "/citizen/payments", icon: CreditCard },
+    ],
+  },
+  {
+    label: "Wastewater & Septic Services",
+    items: [
+      { title: "Sanitation Complaints", url: "/citizen/sanitation-complaints", icon: MessageSquare },
+      { title: "Septic Tank Desludging", url: "/citizen/septic-desludging", icon: Droplets },
+      { title: "Wastewater Complaint", url: "/citizen/wastewater-complaint", icon: MessageSquare },
+      { title: "Waterway Cleanup Report", url: "/citizen/waterway-cleanup", icon: Waves },
+      { title: "Environmental Compliance Request", url: "/citizen/environmental-compliance", icon: Leaf },
+      { title: "Desludging Schedule Viewer", url: "/citizen/desludging-schedule", icon: CalendarDays },
     ],
   },
   {
