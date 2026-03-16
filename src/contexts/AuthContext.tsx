@@ -166,6 +166,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const restoreSession = async () => {
       try {
+        // If user is explicitly on the login page, prefer a truly clean state
+        // so stale sessions cannot auto-log them back in.
+        if (typeof window !== "undefined" && window.location.pathname === "/login") {
+          await Promise.allSettled([
+            citizenSupabase.auth.signOut(),
+            hsmSupabase.auth.signOut(),
+          ]);
+          if (!mounted) return;
+          setUser(null);
+          setSession(null);
+          setAuthRealm(null);
+          setCurrentRole("Citizen_User");
+          setUserName("");
+          setCitizenProfile(null);
+          setHasEstablishments(false);
+          setHasRegisteredEstablishments(false);
+          return;
+        }
+
         const [citizenRes, hsmRes] = await Promise.all([
           citizenSupabase.auth.getSession(),
           hsmSupabase.auth.getSession(),
