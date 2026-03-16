@@ -166,25 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const restoreSession = async () => {
       try {
-        // If user is explicitly on the login page, prefer a truly clean state
-        // so stale sessions cannot auto-log them back in.
-        if (typeof window !== "undefined" && window.location.pathname === "/login") {
-          await Promise.allSettled([
-            citizenSupabase.auth.signOut(),
-            hsmSupabase.auth.signOut(),
-          ]);
-          if (!mounted) return;
-          setUser(null);
-          setSession(null);
-          setAuthRealm(null);
-          setCurrentRole("Citizen_User");
-          setUserName("");
-          setCitizenProfile(null);
-          setHasEstablishments(false);
-          setHasRegisteredEstablishments(false);
-          return;
-        }
-
         const [citizenRes, hsmRes] = await Promise.all([
           citizenSupabase.auth.getSession(),
           hsmSupabase.auth.getSession(),
@@ -305,25 +286,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (
     email: string,
     password: string,
-    userType: "citizen" | "staff"
+    _userType: "citizen" | "staff"
   ): Promise<{ error: Error | null }> => {
-    if (userType === "citizen") {
-      // Ensure staff realm session doesn't interfere with citizen login
-      await Promise.allSettled([hsmSupabase.auth.signOut()]);
+    // Lenient login: first try citizen Supabase, then fall back to HSM/staff Supabase.
+    // This removes the need for users to pick the correct portal up-front.
+    try {
       const { data, error } = await citizenSupabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: error as Error };
-      if (data.user) {
+      if (!error && data.user) {
         await applyCitizenSession(data.user);
+        return { error: null };
       }
-      return { error: null };
-    } else {
-      // Ensure citizen realm session doesn't interfere with staff login
-      await Promise.allSettled([citizenSupabase.auth.signOut()]);
-      const { data, error } = await hsmSupabase.auth.signInWithPassword({ email, password });
-      if (error) return { error: error as Error };
-      if (data.user) await applyHsmSession(data.user);
-      return { error: null };
+    } catch {
+      // Ignore and fall through to HSM login
     }
+
+    try {
+      const { data, error } = await hsmSupabase.auth.signInWithPassword({ email, password });
+      if (!error && data.user) {
+        await applyHsmSession(data.user);
+        return { error: null };
+      }
+      if (error) {
+        return { error: error as Error };
+      }
+    } catch {
+      // Fall through to generic error
+    }
+
+    return { error: new Error("Invalid email or password.") };
   };
 
   const signOut = async () => {
