@@ -113,7 +113,7 @@ const mapProfileRoleToPath = (role: string | null | undefined) => {
     case "city_health_officer":
       return "/health-officer/dashboard";
     case "system_admin":
-      return "/admin/dashboard";
+      return "/sys/dashboard";
     default:
       return null;
   }
@@ -135,7 +135,7 @@ const getDashboardPath = (role: string | null | undefined) => {
     case "LGUAdmin_User":
       return "/lgu/dashboard";
     case "SysAdmin_User":
-      return "/admin/dashboard";
+      return "/sys/dashboard";
     default:
       return "/citizen/dashboard";
   }
@@ -292,6 +292,14 @@ const App = () => (
                 element={
                   <StaffRoute>
                     <CityHealthOfficerDashboard />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/lgu/dashboard"
+                element={
+                  <StaffRoute>
+                    <LguAdminDashboard />
                   </StaffRoute>
                 }
               />
