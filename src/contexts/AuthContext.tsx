@@ -158,6 +158,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    // Safety: never allow auth loading to hang indefinitely
+    const safetyTimeout = setTimeout(() => {
+      if (!mounted) return;
+      setLoading(false);
+    }, 3000);
 
     const restoreSession = async () => {
       try {
@@ -195,6 +200,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setHasEstablishments(false);
         setHasRegisteredEstablishments(false);
       } finally {
+        clearTimeout(safetyTimeout);
         if (mounted) setLoading(false);
       }
     };
@@ -271,6 +277,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       citizenSub.data.subscription.unsubscribe();
       hsmSub.data.subscription.unsubscribe();
     };
@@ -282,6 +289,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     userType: "citizen" | "staff"
   ): Promise<{ error: Error | null }> => {
     if (userType === "citizen") {
+      // Ensure staff realm session doesn't interfere with citizen login
+      await Promise.allSettled([hsmSupabase.auth.signOut()]);
       const { data, error } = await citizenSupabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error as Error };
       if (data.user) {
@@ -289,6 +298,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { error: null };
     } else {
+      // Ensure citizen realm session doesn't interfere with staff login
+      await Promise.allSettled([citizenSupabase.auth.signOut()]);
       const { data, error } = await hsmSupabase.auth.signInWithPassword({ email, password });
       if (error) return { error: error as Error };
       if (data.user) await applyHsmSession(data.user);
@@ -306,9 +317,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCitizenProfile(null);
     setHasEstablishments(false);
     setHasRegisteredEstablishments(false);
-    // Sign out from both Supabase clients in background (do not block)
-    Promise.all([citizenSupabase.auth.signOut(), hsmSupabase.auth.signOut()]).catch(() => {});
-    return Promise.resolve();
+    setLoading(false);
+
+    // Sign out from both Supabase clients (then hard reset the app)
+    await Promise.allSettled([citizenSupabase.auth.signOut(), hsmSupabase.auth.signOut()]);
+
+    // Clear stored tokens / cached auth artifacts
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+      }
+    } catch {
+      // ignore storage errors (e.g. browser restrictions)
+    }
+
+    // Force full application reset to avoid stuck auth state
+    window.location.href = "/login";
   };
 
   return (
