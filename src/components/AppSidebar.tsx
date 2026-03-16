@@ -172,34 +172,31 @@ export function AppSidebar() {
     ];
   } else if (currentRole === "Clerk_User") {
     sections = [
-      { label: "Dashboard", items: [{ title: "Dashboard", url: "/", icon: LayoutDashboard }] },
-      { label: "Citizen Services", items: [
-        { title: "Scan QR Citizen ID", url: "/staff/scan-qr", icon: ScanLine },
-        { title: "Citizen Registration", url: "/staff/citizen-registration", icon: UserPlus },
-        { title: "Citizen Search", url: "/staff/scan-qr", icon: UserSearch },
-      ]},
-      { label: "Consultations", items: [
-        { title: "New Consultation", url: "/health-center", icon: Stethoscope },
-        { title: "Consultation Records", url: "/health-center", icon: FileText },
-      ]},
-      { label: "Health Assessments", items: [
-        { title: "Perform Health Assessment", url: "/staff/assessments", icon: HeartPulse },
-        { title: "Assessment Records", url: "/staff/assessments", icon: Search },
-      ]},
-      { label: "Vaccination Services", items: [
-        { title: "Vaccination Queue", url: "/immunization", icon: Syringe },
-        { title: "Immunization Records", url: "/immunization", icon: FileText },
-        { title: "Vaccination Scheduling", url: "/staff/requests", icon: CalendarDays },
-      ]},
-      { label: "Sanitation Permit Processing", items: [
-        { title: "Document Verification", url: "/staff/permit-verification", icon: ClipboardCheck },
-        { title: "Permit Applications", url: "/sanitation-permit", icon: FileCheck },
-      ]},
-      { label: "Disease Surveillance", items: [
-        { title: "Report Disease Case", url: "/surveillance", icon: ShieldAlert },
-        { title: "Disease Monitoring", url: "/surveillance", icon: Activity },
-      ]},
-      { label: "Requests Management", items: [{ title: "ASSISTED REQUEST & TRACKING", url: "/staff/requests", icon: FileText }] },
+      { label: "Dashboard", items: [{ title: "Dashboard", url: "/staff/dashboard", icon: LayoutDashboard }] },
+      {
+        label: "Citizen Services",
+        items: [
+          { title: "Scan QR Citizen ID", url: "/staff/scan-qr", icon: ScanLine },
+          { title: "Consultations", url: "/staff/consultations", icon: Stethoscope },
+          { title: "Health Assessment", url: "/staff/assessments", icon: HeartPulse },
+          { title: "Vaccination Services", url: "/staff/vaccination", icon: Syringe },
+        ],
+      },
+      {
+        label: "Sanitation Permit Processing",
+        items: [
+          { title: "Document Verification", url: "/staff/permit-verification", icon: ClipboardCheck },
+          { title: "Permit Applications", url: "/sanitation-permit", icon: FileCheck },
+        ],
+      },
+      {
+        label: "Disease Surveillance",
+        items: [{ title: "Disease Surveillance", url: "/staff/surveillance", icon: ShieldAlert }],
+      },
+      {
+        label: "Requests Management",
+        items: [{ title: "Assisted Request & Tracking", url: "/staff/requests", icon: FileText }],
+      },
     ];
   } else if (currentRole === "BSI_User") {
     sections = [

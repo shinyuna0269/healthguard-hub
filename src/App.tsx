@@ -29,6 +29,9 @@ import BhwBarangayHealth from "@/pages/bhw/BarangayHealth";
 import StaffScanQr from "@/pages/staff/StaffScanQr";
 import StaffRequests from "@/pages/staff/StaffRequests";
 import StaffAssessments from "@/pages/staff/StaffAssessments";
+import StaffConsultations from "@/pages/staff/StaffConsultations";
+import StaffVaccination from "@/pages/staff/StaffVaccination";
+import StaffSurveillance from "@/pages/staff/StaffSurveillance";
 import StaffPermitVerification from "@/pages/staff/StaffPermitVerification";
 import StaffCitizenRegistration from "@/pages/staff/StaffCitizenRegistration";
 import DiseaseMapDashboard from "@/pages/surveillance/DiseaseMapDashboard";
@@ -150,48 +153,42 @@ const RoleDashboard = () => {
   useEffect(() => {
     if (!user || loading) return;
 
-    // Citizen users never need HSM profile roles
     if (authRealm === "citizen") {
       setProfileRole("citizen");
       return;
     }
 
     let cancelled = false;
-    const fetchRole = async () => {
-      setRoleLoading(true);
+    setRoleLoading(true);
+    const resolveStaffRole = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("role")
           .eq("user_id", user.id)
           .maybeSingle();
 
         if (cancelled) return;
-        if (error) {
-          setProfileRole(null);
+        if (!profileError && profileData && (profileData as { role?: string }).role) {
+          setProfileRole((profileData as { role: string }).role);
           return;
         }
 
-        setProfileRole((data as { role?: string } | null)?.role ?? null);
+        const { data: rpcRole } = await supabase.rpc("get_user_role", { _user_id: user.id });
+        if (cancelled) return;
+        setProfileRole(rpcRole ?? null);
       } finally {
-        if (!cancelled) {
-          setRoleLoading(false);
-        }
+        if (!cancelled) setRoleLoading(false);
       }
     };
-
-    fetchRole();
-
-    return () => {
-      cancelled = true;
-    };
+    resolveStaffRole();
+    return () => { cancelled = true; };
   }, [authRealm, user, loading]);
 
   useEffect(() => {
     if (loading || !user || roleLoading) return;
-
     const pathFromProfile = mapProfileRoleToPath(profileRole);
-    const targetPath = pathFromProfile ?? getDashboardPath(currentRole);
+    const targetPath = pathFromProfile ?? getDashboardPath(profileRole ?? currentRole);
     navigate(targetPath, { replace: true });
   }, [currentRole, loading, navigate, profileRole, roleLoading, user]);
 
@@ -336,10 +333,10 @@ const App = () => (
                 }
               />
               <Route
-                path="/staff/requests"
+                path="/staff/consultations"
                 element={
                   <StaffRoute>
-                    <StaffRequests />
+                    <StaffConsultations />
                   </StaffRoute>
                 }
               />
@@ -348,6 +345,30 @@ const App = () => (
                 element={
                   <StaffRoute>
                     <StaffAssessments />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/vaccination"
+                element={
+                  <StaffRoute>
+                    <StaffVaccination />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/surveillance"
+                element={
+                  <StaffRoute>
+                    <StaffSurveillance />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/staff/requests"
+                element={
+                  <StaffRoute>
+                    <StaffRequests />
                   </StaffRoute>
                 }
               />

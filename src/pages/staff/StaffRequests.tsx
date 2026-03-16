@@ -52,8 +52,8 @@ const StaffRequests = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold font-heading">Incoming Requests</h1>
-        <p className="text-sm text-muted-foreground">Review and process requests submitted by citizens and BHWs</p>
+        <h1 className="text-2xl font-bold font-heading">Assisted Request & Tracking</h1>
+        <p className="text-sm text-muted-foreground">View and update request status for citizens and BHW-assisted requests</p>
       </div>
 
       <Card className="glass-card">

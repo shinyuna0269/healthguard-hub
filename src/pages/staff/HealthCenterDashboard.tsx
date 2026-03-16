@@ -61,48 +61,35 @@ const HealthCenterDashboard = () => {
               <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/scan-qr")}>
                 Scan QR Citizen ID
               </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/citizen-registration")}>
-                Register Citizen
-              </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/health-center")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/staff/consultations")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
-              <Stethoscope className="h-4 w-4 text-primary" /> Consultation Queue
+              <Stethoscope className="h-4 w-4 text-primary" /> Consultations
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">Start new consultations and review records</p>
-            <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/health-center")}>
-                Start Consultation
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/health-center")}>
-                View Consultation Records
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">New consultation and records</p>
+            <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/consultations")}>
+              Open Consultations
+            </Button>
           </CardContent>
         </Card>
 
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/immunization")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/staff/vaccination")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
               <Syringe className="h-4 w-4 text-primary" /> Vaccination Services
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">Vaccination queue, records, and scheduling</p>
-            <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/immunization")}>
-                Open Vaccination Queue
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/immunization")}>
-                View Immunization Records
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">Queue, records, and scheduling</p>
+            <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/vaccination")}>
+              Open Vaccination Services
+            </Button>
           </CardContent>
         </Card>
 
@@ -153,15 +140,10 @@ const HealthCenterDashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">Scan QR, register walk-ins, and access health history</p>
-            <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/scan-qr")}>
-                Scan QR Citizen ID
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/citizen-registration")}>
-                Citizen Registration
-              </Button>
-            </div>
+            <p className="text-xs text-muted-foreground">Scan QR and access health history</p>
+            <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/staff/scan-qr")}>
+              Scan QR Citizen ID
+            </Button>
           </CardContent>
         </Card>
       </div>

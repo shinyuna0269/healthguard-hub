@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { QC_BARANGAYS } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const BhwNutritionMonitoring = () => {
   const { user } = useAuth();
@@ -32,27 +33,31 @@ const BhwNutritionMonitoring = () => {
   const { data: nutrition = [] } = useQuery({
     queryKey: ["bhw_nutrition"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("nutrition_records")
         .select("*")
-        .order("monitoring_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(100);
+      if (error) throw error;
       return data || [];
     },
   });
 
   const addMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("nutrition_records").insert({
-        child_name: childName,
-        age: age || null,
-        height_cm: height || null,
-        weight_kg: weight || null,
-        nutritional_status: status,
-        monitoring_date: monitoringDate || new Date().toISOString().slice(0, 10),
-        barangay,
-        bhw_user_id: user?.id ?? null,
-      });
+      const payload = {
+        child_name: childName.trim(),
+        age: age.trim() || null,
+        weight: weight.trim() || null,
+        height: height.trim() || null,
+        status,
+        purok: barangay,
+        recorded_by: user?.id ?? null,
+      };
+      if (process.env.NODE_ENV === "development") {
+        console.log("Submitting nutrition record", payload);
+      }
+      const { error } = await supabase.from("nutrition_records").insert([payload]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -63,6 +68,10 @@ const BhwNutritionMonitoring = () => {
       setWeight("");
       setStatus("Normal");
       setMonitoringDate("");
+      toast.success("Nutrition record saved");
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
     },
   });
 
@@ -79,13 +88,13 @@ const BhwNutritionMonitoring = () => {
     if (statusFilter !== "all") {
       list = list.filter(
         (n) =>
-          (n.nutritional_status || "").toLowerCase() ===
+          (n.status || n.nutritional_status || "").toLowerCase() ===
           statusFilter.toLowerCase(),
       );
     }
 
     if (barangayFilter !== "all") {
-      list = list.filter((n) => (n.barangay || "") === barangayFilter);
+      list = list.filter((n) => (n.purok || n.barangay || "") === barangayFilter);
     }
 
     if (ageFilter !== "all") {
@@ -100,9 +109,10 @@ const BhwNutritionMonitoring = () => {
     }
 
     if (dateFilter) {
-      list = list.filter((n) =>
-        (n.monitoring_date || "").startsWith(dateFilter),
-      );
+      list = list.filter((n) => {
+        const d = n.monitoring_date || (n.created_at && String(n.created_at).slice(0, 7));
+        return (d || "").startsWith(dateFilter);
+      });
     }
 
     return list;
@@ -304,10 +314,10 @@ const BhwNutritionMonitoring = () => {
                       {n.weight_kg ?? n.weight ?? "—"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {n.nutritional_status || n.status || "—"}
+                      {n.status || n.nutritional_status || "—"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {n.monitoring_date || n.created_at}
+                      {n.monitoring_date || (n.created_at ? new Date(n.created_at).toLocaleDateString() : "—")}
                     </TableCell>
                   </TableRow>
                 ))}

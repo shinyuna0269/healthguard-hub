@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,8 @@ const BhwVaccinationRequests = () => {
     full_name: string | null;
     barangay?: string | null;
   } | null>(null);
+  const [childName, setChildName] = useState("");
+  const [scheduleDate, setScheduleDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [vaccine, setVaccine] = useState("BCG");
   const [notes, setNotes] = useState("");
   const [search, setSearch] = useState("");
@@ -35,6 +37,12 @@ const BhwVaccinationRequests = () => {
     if (!v) return "";
     return v.replace("GSMS-2026-", "").toLowerCase();
   }, [citizenInput]);
+
+  useEffect(() => {
+    if (selectedCitizen?.full_name) {
+      setChildName(selectedCitizen.full_name);
+    }
+  }, [selectedCitizen]);
 
   const { data: citizenSuggestions = [] } = useQuery({
     queryKey: ["bhw_vax_citizen_suggest", citizenPrefix],
@@ -54,11 +62,12 @@ const BhwVaccinationRequests = () => {
   const { data: vaccinations = [] } = useQuery({
     queryKey: ["bhw_vaccinations"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("vaccinations")
         .select("*")
         .order("vaccination_date", { ascending: false })
         .limit(50);
+      if (error) throw error;
       return data || [];
     },
   });
@@ -101,27 +110,30 @@ const BhwVaccinationRequests = () => {
     return list;
   }, [vaccinations, search, statusFilter, vaccineFilter, barangayFilter, dateFilter]);
 
+  const displayChildName = childName.trim() || selectedCitizen?.full_name?.trim() || "";
+  const canSubmitVaccination = displayChildName.length > 0 && scheduleDate.length > 0 && user;
+
   const requestMutation = useMutation({
     mutationFn: async () => {
-      const vaccination_date = new Date().toISOString().split("T")[0];
+      const name = displayChildName;
+      const vaccination_date = scheduleDate.slice(0, 10);
 
-      const { error } = await supabase.from("vaccinations").insert({
-        child_name: selectedCitizen?.full_name || null,
-        patient_name: selectedCitizen?.full_name || null,
-        patient_type: "Child",
-        age: null,
+      const payload = {
+        child_name: name,
         vaccine,
         vaccination_date,
         status: "scheduled",
-        bhw_name: null,
         recorded_by: user!.id,
-      });
+      };
+      const { error } = await supabase.from("vaccinations").insert(payload);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bhw_vaccinations"] });
       setCitizenInput("");
       setSelectedCitizen(null);
+      setChildName("");
+      setScheduleDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       toast.success("Vaccination request submitted");
     },
@@ -146,7 +158,7 @@ const BhwVaccinationRequests = () => {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
-              <Label className="text-xs">Citizen ID</Label>
+              <Label className="text-xs">Citizen ID (optional)</Label>
               <Input
                 placeholder="GSMS-2026-XXXXXXXX"
                 value={citizenInput}
@@ -180,6 +192,24 @@ const BhwVaccinationRequests = () => {
               )}
             </div>
             <div>
+              <Label className="text-xs">Child / Citizen Name *</Label>
+              <Input
+                placeholder="Full name (required)"
+                value={childName}
+                onChange={(e) => setChildName(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Schedule Date *</Label>
+              <Input
+                type="date"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
               <Label className="text-xs">Vaccine Type</Label>
               <select
                 className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs"
@@ -206,7 +236,7 @@ const BhwVaccinationRequests = () => {
             size="sm"
             className="gap-1"
             onClick={() => requestMutation.mutate()}
-            disabled={requestMutation.isPending}
+            disabled={requestMutation.isPending || !canSubmitVaccination}
           >
             <Send className="h-4 w-4" /> Submit Vaccination Request
           </Button>
@@ -285,11 +315,11 @@ const BhwVaccinationRequests = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs">Citizen Name</TableHead>
+                  <TableHead className="text-xs">Child Name</TableHead>
                   <TableHead className="text-xs">Vaccine Type</TableHead>
                   <TableHead className="text-xs">Schedule Date</TableHead>
                   <TableHead className="text-xs">Status</TableHead>
-                  <TableHead className="text-xs">BHW User</TableHead>
+                  <TableHead className="text-xs">Created At</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -304,7 +334,7 @@ const BhwVaccinationRequests = () => {
                       <StatusBadge status={v.status} />
                     </TableCell>
                     <TableCell className="text-sm">
-                      {v.bhw_user_id || v.recorded_by || "—"}
+                      {v.created_at ? new Date(v.created_at).toLocaleDateString() : "—"}
                     </TableCell>
                   </TableRow>
                 ))}
