@@ -200,24 +200,21 @@ export function AppSidebar() {
     ];
   } else if (currentRole === "BSI_User") {
     sections = [
-      { label: "Dashboard", items: [{ title: "Dashboard", url: "/", icon: LayoutDashboard }] },
+      { label: "Dashboard", items: [{ title: "Dashboard", url: "/staff/inspector-dashboard", icon: LayoutDashboard }] },
       { label: "Inspection Management", items: [
-        { title: "Assigned Inspections", url: "/sanitation-permit", icon: ClipboardCheck },
-        { title: "Inspection Calendar", url: "/sanitation-permit", icon: CalendarDays },
+        { title: "Inspection Management", url: "/inspector/inspection-management", icon: ClipboardCheck },
       ]},
       { label: "Establishment Inspections", items: [
-        { title: "Establishment List", url: "/citizen/establishments", icon: Building2 },
-        { title: "Inspection Reports", url: "/citizen/inspections", icon: Search },
+        { title: "Establishment List", url: "/inspector/establishments", icon: Building2 },
+        { title: "Inspection Reports", url: "/inspector/inspection-reports", icon: Search },
       ]},
       { label: "Sanitation Complaints", items: [
-        { title: "Complaint Inspections", url: "/wastewater", icon: MessageSquare },
-        { title: "Complaint Reports", url: "/wastewater", icon: FileText },
+        { title: "Complaint Reports", url: "/inspector/complaints", icon: FileText },
       ]},
       { label: "Correction Notices", items: [
-        { title: "Issued Notices", url: "/sanitation-permit", icon: Award },
-        { title: "Compliance Monitoring", url: "/sanitation-permit", icon: Search },
+        { title: "Correction Notices", url: "/inspector/correction-notices", icon: Award },
       ]},
-      { label: "History", items: [{ title: "Inspection History", url: "/citizen/inspections", icon: Search }] },
+      { label: "History", items: [{ title: "Inspection History", url: "/inspector/history", icon: Search }] },
     ];
   } else if (currentRole === "Captain_User") {
     sections = [

@@ -4,16 +4,26 @@ import { useNavigate } from "react-router-dom";
 import { ClipboardCheck, CalendarDays, MessageSquare, BadgeCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
 
 const InspectorDashboard = () => {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
 
   const { data: inspections = [] } = useQuery({
-    queryKey: ["inspector_inspections"],
+    queryKey: ["inspector_sanitary_inspections", user?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("inspections").select("id").limit(200);
+      if (!user) return [];
+      const { data, error } = await (supabase as any)
+        .from("sanitary_inspections")
+        .select("id, status, scheduled_date")
+        .eq("inspector_id", user.id)
+        .order("scheduled_date", { ascending: false })
+        .limit(200);
+      if (error) throw error;
       return data || [];
     },
+    enabled: !loading && !!user,
   });
 
   const { data: complaints = [] } = useQuery({
@@ -22,9 +32,12 @@ const InspectorDashboard = () => {
       const { data } = await (supabase as any).from("sanitation_complaints").select("complaint_id, status").limit(200);
       return data || [];
     },
+    enabled: !loading && !!user,
   });
 
-  const pendingComplaints = complaints.filter((c) => c.status === "pending").length;
+  const pendingComplaints = complaints.filter((c) => String(c.status || "").toLowerCase() === "pending").length;
+  const scheduledInspections = inspections.filter((i: any) => String(i.status || "").toLowerCase() === "scheduled").length;
+  const completedInspections = inspections.filter((i: any) => String(i.status || "").toLowerCase() === "completed").length;
 
   return (
     <div className="space-y-6">
@@ -34,26 +47,28 @@ const InspectorDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/sanitation-permit")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/inspector/inspection-management")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-primary" /> Assigned Inspections
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-xs text-muted-foreground">{inspections.length} inspections in system</p>
+            <p className="text-xs text-muted-foreground">
+              {inspections.length} total · {scheduledInspections} scheduled · {completedInspections} completed
+            </p>
             <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/sanitation-permit")}>
+              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/inspector/inspection-management")}>
                 View Assigned Inspections
               </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/sanitation-permit")}>
+              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/inspector/inspection-management")}>
                 Open Inspection Calendar
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/wastewater")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/inspector/complaints")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" /> Sanitation Complaints
@@ -62,17 +77,14 @@ const InspectorDashboard = () => {
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">{pendingComplaints} complaints pending investigation</p>
             <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/wastewater")}>
-                View Complaint Inspections
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/wastewater")}>
-                Submit Complaint Report
+              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/inspector/complaints")}>
+                Open Complaint Reports
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/sanitation-permit")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/inspector/correction-notices")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
               <BadgeCheck className="h-4 w-4 text-primary" /> Correction Notices
@@ -81,17 +93,14 @@ const InspectorDashboard = () => {
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">Issue correction notices and schedule re-inspections</p>
             <div className="flex flex-col gap-1.5">
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/sanitation-permit")}>
-                Issue Correction Notice
-              </Button>
-              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/sanitation-permit")}>
-                View Compliance Status
+              <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/inspector/correction-notices")}>
+                Open Correction Notices
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/sanitation-permit")}>
+        <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/inspector/history")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-primary" /> Re-Inspections
@@ -99,7 +108,7 @@ const InspectorDashboard = () => {
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">Review re-inspection schedule for corrected establishments</p>
-            <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/sanitation-permit")}>
+            <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/inspector/history")}>
               Scheduled Re-Inspections
             </Button>
           </CardContent>

@@ -39,6 +39,12 @@ import LguRequests from "@/pages/lgu/LguRequests";
 import LguVaccination from "@/pages/lgu/LguVaccination";
 import LguSanitation from "@/pages/lgu/LguSanitation";
 import LguAnalytics from "@/pages/lgu/LguAnalytics";
+import InspectorInspectionManagement from "@/pages/inspector/InspectorInspectionManagement";
+import InspectorEstablishments from "@/pages/inspector/InspectorEstablishments";
+import InspectorInspectionReports from "@/pages/inspector/InspectorInspectionReports";
+import InspectorComplaints from "@/pages/inspector/InspectorComplaints";
+import InspectorCorrectionNotices from "@/pages/inspector/InspectorCorrectionNotices";
+import InspectorHistory from "@/pages/inspector/InspectorHistory";
 import SystemAdminUsers from "@/pages/sys/SystemAdminUsers";
 import SystemAdminPlaceholder from "@/pages/sys/SystemAdminPlaceholder";
 import SettingsPage from "@/pages/SettingsPage";
@@ -323,6 +329,55 @@ const App = () => (
               <Route path="/wastewater" element={<WastewaterServices />} />
               <Route path="/surveillance" element={<HealthSurveillance />} />
               <Route path="/surveillance/map" element={<DiseaseMapDashboard />} />
+              {/* Sanitation Inspector routes */}
+              <Route
+                path="/inspector/inspection-management"
+                element={
+                  <StaffRoute>
+                    <InspectorInspectionManagement />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/inspector/establishments"
+                element={
+                  <StaffRoute>
+                    <InspectorEstablishments />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/inspector/inspection-reports"
+                element={
+                  <StaffRoute>
+                    <InspectorInspectionReports />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/inspector/complaints"
+                element={
+                  <StaffRoute>
+                    <InspectorComplaints />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/inspector/correction-notices"
+                element={
+                  <StaffRoute>
+                    <InspectorCorrectionNotices />
+                  </StaffRoute>
+                }
+              />
+              <Route
+                path="/inspector/history"
+                element={
+                  <StaffRoute>
+                    <InspectorHistory />
+                  </StaffRoute>
+                }
+              />
               {/* Health Center Staff routes */}
               <Route
                 path="/staff/scan-qr"

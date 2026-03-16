@@ -1,20 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Activity, LogIn, Moon, Sun, User, Shield } from "lucide-react";
+import { Activity, Eye, EyeOff, LogIn, Moon, Sun } from "lucide-react";
 import { toast } from "sonner";
+import { Link, useLocation } from "react-router-dom";
 
 type LoginAs = "citizen" | "staff";
 
 const LoginPage = () => {
   const { signIn } = useAuth();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loginAs, setLoginAs] = useState<LoginAs>("citizen");
+  const [showPassword, setShowPassword] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
     const stored = window.localStorage.getItem("healthguard-theme");
@@ -22,6 +24,11 @@ const LoginPage = () => {
     const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     return prefersDark ? "dark" : "light";
   });
+
+  const loginAs = useMemo<LoginAs>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get("portal") === "staff" ? "staff" : "citizen";
+  }, [location.search]);
 
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -82,32 +89,9 @@ const LoginPage = () => {
           <CardHeader className="pb-4">
             <CardTitle className="text-base font-heading flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
-                <LogIn className="h-4 w-4 text-primary" /> Sign in to continue
+                <LogIn className="h-4 w-4 text-primary" /> Sign in to your account
               </span>
             </CardTitle>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Login as</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={loginAs === "citizen" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 gap-1.5"
-                  onClick={() => setLoginAs("citizen")}
-                >
-                  <User className="h-4 w-4" /> Citizen
-                </Button>
-                <Button
-                  type="button"
-                  variant={loginAs === "staff" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1 gap-1.5"
-                  onClick={() => setLoginAs("staff")}
-                >
-                  <Shield className="h-4 w-4" /> Admin / Staff
-                </Button>
-              </div>
-            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -124,29 +108,42 @@ const LoginPage = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Password</Label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary rounded p-1"
+                    onClick={() => setShowPassword((s) => !s)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
               <Button type="submit" className="w-full mt-1" disabled={loading}>
                 {loading ? "Signing you in..." : "Sign In"}
               </Button>
+              <p className="text-[11px] text-center text-muted-foreground">
+                Authorized access for Quezon City residents and government personnel.
+              </p>
             </form>
             <p className="mt-3 text-[11px] text-center text-muted-foreground">
-              Staff or inspector?{" "}
-              <button
-                type="button"
+              <span>Staff or inspector? </span>
+              <Link
+                to="/login?portal=staff"
                 className="underline underline-offset-2 hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary rounded"
-                onClick={() => setLoginAs("staff")}
-                aria-label="Switch to Admin or Staff login"
+                aria-label="Access staff portal"
               >
-                Log in as Admin / Staff
-              </button>
+                Access staff portal
+              </Link>
             </p>
           </CardContent>
         </Card>
