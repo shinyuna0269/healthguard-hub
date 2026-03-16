@@ -245,6 +245,8 @@ const DiseaseMapDashboard = () => {
     setDateTo("");
   };
 
+  const resolvedCount = cases.length - activeCases;
+
   return (
     <div className="space-y-4">
       <div className="space-y-1">
@@ -256,14 +258,7 @@ const DiseaseMapDashboard = () => {
         </p>
       </div>
 
-      {/* Map */}
-      <Card className="glass-card">
-        <CardContent className="p-0">
-          <div ref={mapRef} className="w-full h-[520px] rounded-lg" />
-        </CardContent>
-      </Card>
-
-      {/* Summary cards */}
+      {/* Summary cards — above the map */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card className="glass-card border border-primary/10">
           <CardContent className="py-3 px-3">
@@ -279,11 +274,18 @@ const DiseaseMapDashboard = () => {
         </Card>
         <Card className="glass-card border border-emerald-400/20">
           <CardContent className="py-3 px-3">
-            <p className="text-[11px] text-muted-foreground mb-1">Resolved</p>
-            <p className="text-xl font-semibold font-heading text-emerald-600">{cases.length - activeCases}</p>
+            <p className="text-[11px] text-muted-foreground mb-1">Resolved Cases</p>
+            <p className="text-xl font-semibold font-heading text-emerald-600">{resolvedCount}</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Map */}
+      <Card className="glass-card">
+        <CardContent className="p-0">
+          <div ref={mapRef} className="w-full h-[520px] rounded-lg" />
+        </CardContent>
+      </Card>
 
       {/* Filters + case list */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

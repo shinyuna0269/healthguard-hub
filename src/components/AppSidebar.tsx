@@ -239,15 +239,19 @@ export function AppSidebar() {
     ];
   } else if (currentRole === "LGUAdmin_User") {
     sections = [
-      { label: "Dashboard", items: [{ title: "Dashboard", url: "/", icon: LayoutDashboard }] },
-      { label: "Municipal Overview", items: [
-        { title: "Real-Time Service Requests", url: "/lgu/requests", icon: FileText },
-        { title: "Disease Mapping Dashboard", url: "/surveillance/map", icon: Map },
-        { title: "Vaccination Coverage", url: "/lgu/vaccination", icon: Syringe },
-        { title: "Active Inspections", url: "/lgu/sanitation", icon: ClipboardCheck },
-        { title: "Establishment Compliance", url: "/lgu/sanitation", icon: Building2 },
-      ]},
-      { label: "Reports & Analytics", items: [{ title: "Municipal Analytics", url: "/lgu/analytics", icon: BarChart3 }] },
+      { label: "Dashboard", items: [{ title: "Dashboard", url: "/lgu/dashboard", icon: LayoutDashboard }] },
+      {
+        label: "Municipal Overview",
+        items: [
+          { title: "Real-Time Service Requests", url: "/lgu/requests", icon: FileText },
+          { title: "Disease Mapping Dashboard", url: "/surveillance/map", icon: Map },
+          { title: "Vaccination Coverage", url: "/lgu/vaccination", icon: Syringe },
+          { title: "Establishment Compliance", url: "/lgu/sanitation", icon: Building2 },
+        ],
+      },
+      {
+        label: "Reports & Analytics",
+        items: [{ title: "Municipal Analytics", url: "/lgu/analytics", icon: BarChart3 }] },
     ];
   } else if (currentRole === "SysAdmin_User") {
     sections = [

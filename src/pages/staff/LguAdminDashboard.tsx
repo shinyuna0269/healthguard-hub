@@ -101,13 +101,13 @@ const LguAdminDashboard = () => {
         <Card className="glass-card cursor-pointer hover:border-primary/40 transition-colors" onClick={() => navigate("/lgu/sanitation")}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-heading flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4 text-primary" /> Sanitation & Inspections
+              <ClipboardCheck className="h-4 w-4 text-primary" /> Establishment Compliance
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="text-xs text-muted-foreground">{pendingPermits} permits pending / under review</p>
             <Button variant="outline" size="sm" className="justify-start text-xs" onClick={() => navigate("/lgu/sanitation")}>
-              View Monitoring
+              View Compliance
             </Button>
           </CardContent>
         </Card>
